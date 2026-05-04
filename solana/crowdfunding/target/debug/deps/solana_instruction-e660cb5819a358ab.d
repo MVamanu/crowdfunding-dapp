@@ -1,0 +1,10 @@
+\\?\C:\Projects\CrowdFundingApp\solana\crowdfunding\target\debug\deps\solana_instruction-e660cb5819a358ab.d: C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\lib.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\account_meta.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\error.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\syscalls.rs
+
+\\?\C:\Projects\CrowdFundingApp\solana\crowdfunding\target\debug\deps\libsolana_instruction-e660cb5819a358ab.rlib: C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\lib.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\account_meta.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\error.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\syscalls.rs
+
+\\?\C:\Projects\CrowdFundingApp\solana\crowdfunding\target\debug\deps\libsolana_instruction-e660cb5819a358ab.rmeta: C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\lib.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\account_meta.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\error.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\syscalls.rs
+
+C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\lib.rs:
+C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\account_meta.rs:
+C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\error.rs:
+C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-instruction-2.3.3\src\syscalls.rs:

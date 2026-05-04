@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-b0fff2cd960a7eb430a2211d977110a2b5af4e98",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.4.4"
+  },
+  "userSourceNameMap": {
+    "contracts/CrowdfundingMilestone.sol": "project/contracts/CrowdfundingMilestone.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/CrowdfundingMilestone.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ncontract CrowdfundingMilestone {\n\n    struct Milestone {\n        string title;\n        string description;\n        uint256 amount;\n        bool completed;\n        bool approved;\n        uint256 votesFor;\n        uint256 votesAgainst;\n        uint256 votingDeadline;\n        bool votingActive;\n    }\n\n    struct Campaign {\n        address owner;\n        string title;\n        string description;\n        uint256 totalGoal;\n        uint256 amountRaised;\n        bool isActive;\n        uint256 deadline;\n        uint256 milestoneCount;\n        uint256 currentMilestone;\n    }\n\n    mapping(uint256 => Campaign) public campaigns;\n    mapping(uint256 => mapping(uint256 => Milestone)) public milestones;\n    mapping(uint256 => mapping(address => uint256)) public donations;\n    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasVoted;\n    uint256 public campaignCount;\n\n    event CampaignCreated(uint256 indexed id, address owner, string title, uint256 goal);\n    event DonationReceived(uint256 indexed id, address donor, uint256 amount);\n    event MilestoneSubmitted(uint256 indexed campaignId, uint256 milestoneId);\n    event VoteCast(uint256 indexed campaignId, uint256 milestoneId, address voter, bool vote);\n    event MilestoneApproved(uint256 indexed campaignId, uint256 milestoneId, uint256 amount);\n    event MilestoneRejected(uint256 indexed campaignId, uint256 milestoneId);\n    event RefundIssued(uint256 indexed campaignId, address donor, uint256 amount);\n\n    modifier onlyOwner(uint256 _id) {\n        require(campaigns[_id].owner == msg.sender, \"Nu esti proprietarul\");\n        _;\n    }\n\n    modifier campaignExists(uint256 _id) {\n        require(_id < campaignCount, \"Campania nu exista\");\n        _;\n    }\n\n    function createCampaign(\n        string memory _title,\n        string memory _description,\n        uint256 _durationDays,\n        string[] memory _milestoneTitles,\n        string[] memory _milestoneDescriptions,\n        uint256[] memory _milestoneAmounts\n    ) external returns (uint256) {\n        require(_milestoneTitles.length >= 2, \"Minim 2 milestone-uri\");\n        require(_milestoneTitles.length == _milestoneDescriptions.length, \"Date invalide\");\n        require(_milestoneTitles.length == _milestoneAmounts.length, \"Sume invalide\");\n\n        uint256 totalGoal = 0;\n        for (uint256 i = 0; i < _milestoneAmounts.length; i++) {\n            require(_milestoneAmounts[i] > 0, \"Suma milestone invalida\");\n            totalGoal += _milestoneAmounts[i];\n        }\n\n        uint256 id = campaignCount++;\n        campaigns[id] = Campaign({\n            owner: msg.sender,\n            title: _title,\n            description: _description,\n            totalGoal: totalGoal,\n            amountRaised: 0,\n            isActive: true,\n            deadline: block.timestamp + (_durationDays * 1 days),\n            milestoneCount: _milestoneTitles.length,\n            currentMilestone: 0\n        });\n\n        for (uint256 i = 0; i < _milestoneTitles.length; i++) {\n            milestones[id][i] = Milestone({\n                title: _milestoneTitles[i],\n                description: _milestoneDescriptions[i],\n                amount: _milestoneAmounts[i],\n                completed: false,\n                approved: false,\n                votesFor: 0,\n                votesAgainst: 0,\n                votingDeadline: 0,\n                votingActive: false\n            });\n        }\n\n        emit CampaignCreated(id, msg.sender, _title, totalGoal);\n        return id;\n    }\n\n    function donate(uint256 _id) external payable campaignExists(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(campaign.isActive, \"Campania nu este activa\");\n        require(block.timestamp < campaign.deadline, \"Campania a expirat\");\n        require(msg.value > 0, \"Donatie invalida\");\n\n        donations[_id][msg.sender] += msg.value;\n        campaign.amountRaised += msg.value;\n\n        emit DonationReceived(_id, msg.sender, msg.value);\n    }\n\n    function submitMilestone(uint256 _id) external campaignExists(_id) onlyOwner(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(campaign.isActive, \"Campania nu este activa\");\n        require(campaign.amountRaised >= campaign.totalGoal, \"Goalul nu a fost atins\");\n\n        uint256 milestoneId = campaign.currentMilestone;\n        require(milestoneId < campaign.milestoneCount, \"Toate milestone-urile completate\");\n\n        Milestone storage milestone = milestones[_id][milestoneId];\n        require(!milestone.votingActive, \"Votul este deja activ\");\n        require(!milestone.completed, \"Milestone deja completat\");\n\n        milestone.votingActive = true;\n        milestone.votingDeadline = block.timestamp + 3 days;\n\n        emit MilestoneSubmitted(_id, milestoneId);\n    }\n\n    function vote(uint256 _id, uint256 _milestoneId, bool _approve) external campaignExists(_id) {\n        require(donations[_id][msg.sender] > 0, \"Trebuie sa fii donator\");\n        require(!hasVoted[_id][_milestoneId][msg.sender], \"Ai votat deja\");\n\n        Milestone storage milestone = milestones[_id][_milestoneId];\n        require(milestone.votingActive, \"Votul nu este activ\");\n        require(block.timestamp < milestone.votingDeadline, \"Votul a expirat\");\n\n        hasVoted[_id][_milestoneId][msg.sender] = true;\n        uint256 votingPower = donations[_id][msg.sender];\n\n        if (_approve) {\n            milestone.votesFor += votingPower;\n        } else {\n            milestone.votesAgainst += votingPower;\n        }\n\n        emit VoteCast(_id, _milestoneId, msg.sender, _approve);\n    }\n\n    function finalizeMilestone(uint256 _id, uint256 _milestoneId) external campaignExists(_id) {\n        Campaign storage campaign = campaigns[_id];\n        Milestone storage milestone = milestones[_id][_milestoneId];\n        require(milestone.votingActive, \"Votul nu este activ\");\n        require(\n            block.timestamp >= milestone.votingDeadline ||\n            milestone.votesFor + milestone.votesAgainst >= campaign.amountRaised,\n            \"Votul nu s-a incheiat\"\n        );\n\n        milestone.votingActive = false;\n\n        if (milestone.votesFor > milestone.votesAgainst) {\n            milestone.completed = true;\n            milestone.approved = true;\n            campaign.currentMilestone++;\n\n            (bool success, ) = payable(campaign.owner).call{value: milestone.amount}(\"\");\n            require(success, \"Transfer esuat\");\n\n            emit MilestoneApproved(_id, _milestoneId, milestone.amount);\n\n            if (campaign.currentMilestone >= campaign.milestoneCount) {\n                campaign.isActive = false;\n            }\n        } else {\n            milestone.completed = false;\n            milestone.approved = false;\n            emit MilestoneRejected(_id, _milestoneId);\n        }\n    }\n\n    function refund(uint256 _id) external campaignExists(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(\n            block.timestamp >= campaign.deadline && campaign.amountRaised < campaign.totalGoal,\n            \"Conditiile de refund nu sunt indeplinite\"\n        );\n\n        uint256 amount = donations[_id][msg.sender];\n        require(amount > 0, \"Nu ai donatii de returnat\");\n\n        uint256 milestonesPaid = campaign.currentMilestone;\n        uint256 paidAmount = 0;\n        for (uint256 i = 0; i < milestonesPaid; i++) {\n            paidAmount += milestones[_id][i].amount;\n        }\n\n        uint256 remainingRatio = (campaign.amountRaised - paidAmount) * 1e18 / campaign.amountRaised;\n        uint256 refundAmount = amount * remainingRatio / 1e18;\n\n        donations[_id][msg.sender] = 0;\n        (bool success, ) = payable(msg.sender).call{value: refundAmount}(\"\");\n        require(success, \"Refund esuat\");\n\n        emit RefundIssued(_id, msg.sender, refundAmount);\n    }\n\n    function getCampaign(uint256 _id) external view campaignExists(_id) returns (Campaign memory) {\n        return campaigns[_id];\n    }\n\n    function getMilestone(uint256 _id, uint256 _milestoneId) external view returns (Milestone memory) {\n        return milestones[_id][_milestoneId];\n    }\n\n    function getDonation(uint256 _id, address _donor) external view returns (uint256) {\n        return donations[_id][_donor];\n    }\n}\n"
+      }
+    }
+  }
+}
