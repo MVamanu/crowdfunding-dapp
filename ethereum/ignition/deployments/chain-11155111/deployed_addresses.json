@@ -1,5 +1,6 @@
 {
   "CrowdfundingModule#Crowdfunding": "0x53EF55468DF1570952b7A07eF46926c3837e5770",
   "CrowdfundingMilestoneModule#CrowdfundingMilestone": "0x50B8de29C8226a85c99b9679060A30a180277a1E",
-  "CrowdfundingUnifiedModule#CrowdfundingUnified": "0x4C6b83E06c9B7f83a029312eA9E3E00E7CBC6a5e"
+  "CrowdfundingUnifiedModule#CrowdfundingUnified": "0x4C6b83E06c9B7f83a029312eA9E3E00E7CBC6a5e",
+  "CrowdfundingCrossMilestoneModule#CrowdfundingCrossMilestone": "0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E"
 }

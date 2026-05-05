@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
+
+const CROSS_CONTRACT = "0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E";
+const CROSS_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSD,uint256 amountRaisedETH,uint256 amountRaisedSOLusd,bool isActive,uint256 deadline,string solanaAddress,uint256 milestoneCount,uint256 currentMilestone,string primaryChain))", "function campaignCount() view returns (uint256)"];
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
@@ -38,6 +41,21 @@ export default function KickstartCampaigns() {
       } catch (e) { console.error(e); }
 
       try {
+        const crossContract = new ethers.Contract(CROSS_CONTRACT, CROSS_ABI, provider);
+        const crossCount = await crossContract.campaignCount();
+        for (let i = 0; i < Number(crossCount); i++) {
+          const c = await crossContract.getCampaign(i);
+          const raisedUSD = (Number(c.amountRaisedETH) / 1e18) * prices.eth + Number(c.amountRaisedSOLusd);
+          all.push({ id: `cross-ms-${i}`, title: c.title, description: c.description,
+            raisedUSD, goalUSD: Number(c.goalUSD),
+            isActive: c.isActive, owner: c.owner, blockchain: "cross",
+            milestoneCount: Number(c.milestoneCount),
+            currentMilestone: Number(c.currentMilestone),
+            route: `/cross-milestone/${i}` });
+        }
+      } catch (e) { console.error(e); }
+
+      try {
         const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
         const dummyWallet = { publicKey: PublicKey.default, signTransaction: async t => t, signAllTransactions: async t => t };
         const prov = new anchor.AnchorProvider(connection, dummyWallet, { commitment: "confirmed" });
@@ -69,7 +87,7 @@ export default function KickstartCampaigns() {
       <section className="hero">
         <div className="container">
           <div className="hero-content">
-            <div className="hero-label">Kickstart — Milestone Funding</div>
+            <div className="hero-label">Kickstart â€” Milestone Funding</div>
             <h1 className="hero-title">Lanseaza Proiectul Tau<br/>cu Incredere.</h1>
             <div className="divider"></div>
             <p className="hero-desc">Campanii cu finantare etapizata. Fondurile sunt eliberate doar dupa aprobarea prin vot a fiecarei etape.</p>
@@ -91,6 +109,7 @@ export default function KickstartCampaigns() {
             <div style={{display:"flex", gap:"12px"}}>
               <Link to="/create-milestone" className="btn-outline">+ ETH Milestone</Link>
               <Link to="/create-solana-milestone" className="btn-outline">+ SOL Milestone</Link>
+              <Link to="/create-cross-milestone" className="btn-gold">+ Cross Milestone</Link>
             </div>
           </div>
 
@@ -98,7 +117,7 @@ export default function KickstartCampaigns() {
             <div className="loading-state"><div className="loading-spinner"></div><p>Se incarca...</p></div>
           ) : campaigns.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">◇</div>
+              <div className="empty-icon">â—‡</div>
               <h3>Niciun proiect Kickstart</h3>
               <p>Fii primul care lanseaza un proiect cu milestone-uri.</p>
               <div style={{display:"flex", gap:"12px", justifyContent:"center", marginTop:"24px"}}>

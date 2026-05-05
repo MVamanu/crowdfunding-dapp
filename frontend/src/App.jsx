@@ -17,6 +17,8 @@ import SolanaMilestoneCampaigns from "./pages/SolanaMilestoneCampaigns";
 import SolanaMilestoneCampaignDetail from "./pages/SolanaMilestoneCampaignDetail";
 import CreateSolanaMilestone from "./pages/CreateSolanaMilestone";
 import CreateSolCampaign from "./pages/CreateSolCampaign";
+import CreateCrossMilestone from "./pages/CreateCrossMilestone";
+import CrossMilestoneDetail from "./pages/CrossMilestoneDetail";
 import "./index.css";
 
 const ETH_CONTRACT_ADDRESS = "0x53EF55468DF1570952b7A07eF46926c3837e5770";
@@ -124,6 +126,8 @@ export default function App() {
         <Route path="/milestone-campaigns" element={<MilestoneCampaigns />} />
         <Route path="/solana-milestones" element={<SolanaMilestoneCampaigns />} />
         <Route path="/solana-milestone/:id" element={<SolanaMilestoneCampaignDetail {...commonProps} />} />
+        <Route path="/create-cross-milestone" element={<CreateCrossMilestone ethConnected={ethConnected} solAddress={solAddress} />} />
+        <Route path="/cross-milestone/:id" element={<CrossMilestoneDetail ethConnected={ethConnected} ethAddress={ethAddress} ethContract={ethContract} solWallet={solWallet} solConnected={solConnected} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/create-sol" element={<CreateSolCampaign solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/create-solana-milestone" element={<CreateSolanaMilestone solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/unified-campaigns" element={<UnifiedCampaigns />} />
