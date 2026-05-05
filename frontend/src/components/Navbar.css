@@ -1,0 +1,68 @@
+.navbar {
+  background: var(--navy);
+  border-bottom: 3px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0;
+}
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+  gap: 32px;
+}
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--white);
+}
+.brand-icon { color: var(--gold); font-size: 18px; }
+.brand-name {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: 0.5px;
+}
+.navbar-links { display: flex; gap: 32px; }
+.nav-link {
+  color: rgba(255,255,255,0.65);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 6px 0;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.nav-link:hover, .nav-link.active {
+  color: var(--white);
+  border-bottom-color: var(--gold);
+}
+.navbar-wallets { display: flex; gap: 10px; }
+.wallet-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.wallet-btn:hover { background: rgba(255,255,255,0.15); }
+.wallet-btn.connected { border-color: var(--gold); color: var(--gold); }
+.wallet-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+.eth-dot { background: #627eea; }
+.sol-dot { background: #9945ff; }
+.wallet-btn.connected .wallet-dot { background: var(--gold); }
+
+.sol-wallet-group { display: flex; gap: 6px; }
+.solflare-btn { }
+.solflare-dot { background: #FC8B00 !important; }

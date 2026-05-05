@@ -1,0 +1,7 @@
+.unified-page { padding: 64px 0; }
+.unified-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 48px; }
+.unified-desc { color: var(--text-secondary); font-size: 15px; margin-top: 12px; max-width: 560px; }
+.unified-card { display: flex; flex-direction: column; padding: 24px; text-decoration: none; color: inherit; transition: all 0.25s; }
+.unified-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--gold); }
+.unified-card-header { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.chain-badges { display: flex; gap: 4px; }

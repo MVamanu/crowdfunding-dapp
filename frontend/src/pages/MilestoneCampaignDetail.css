@@ -1,0 +1,58 @@
+.milestones-timeline { margin-top: 32px; }
+.milestones-title { font-size: 20px; color: var(--navy); margin-bottom: 24px; }
+
+.timeline-item {
+  display: flex; gap: 16px; margin-bottom: 20px;
+  padding: 20px; border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border); background: var(--white);
+  transition: all 0.2s;
+}
+.timeline-item.approved { border-color: var(--success); background: #f0fdf4; }
+.timeline-item.rejected { border-color: var(--danger); background: #fdf0ee; }
+.timeline-item.voting { border-color: var(--gold); background: rgba(201,168,76,0.05); }
+.timeline-item.current { border-color: var(--navy); }
+
+.timeline-marker {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--cream-dark); color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.timeline-item.approved .timeline-marker { background: var(--success); color: white; }
+.timeline-item.voting .timeline-marker { background: var(--gold); color: var(--navy); }
+.timeline-item.current .timeline-marker { background: var(--navy); color: white; }
+
+.timeline-content { flex: 1; }
+.timeline-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.timeline-title { font-size: 16px; font-weight: 600; color: var(--navy); }
+.timeline-amount { font-size: 14px; font-weight: 600; color: var(--gold); }
+.timeline-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+.voting-panel { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.voting-stats { margin-bottom: 12px; }
+.vote-bar-wrap { height: 8px; background: #fdf0ee; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.vote-bar-for { height: 100%; background: var(--success); border-radius: 4px; transition: width 0.5s; }
+.vote-numbers { display: flex; justify-content: space-between; font-size: 12px; }
+.vote-for { color: var(--success); font-weight: 600; }
+.vote-against { color: var(--danger); font-weight: 600; }
+.vote-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.vote-btn {
+  flex: 1; padding: 10px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+}
+.vote-btn.approve { background: var(--success); color: white; }
+.vote-btn.approve:hover { opacity: 0.85; }
+.vote-btn.reject { background: var(--danger); color: white; }
+.vote-btn.reject:hover { opacity: 0.85; }
+.finalize-btn {
+  width: 100%; padding: 8px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--cream);
+  font-size: 12px; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+}
+.finalize-btn:hover { border-color: var(--navy); color: var(--navy); }
+
+.donor-badge {
+  text-align: center; font-size: 12px; color: var(--success);
+  font-weight: 500; margin-top: 8px; padding: 8px;
+  background: #e8f5ee; border-radius: var(--radius);
+}

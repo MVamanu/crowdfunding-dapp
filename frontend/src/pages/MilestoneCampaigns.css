@@ -1,0 +1,23 @@
+.milestone-list-page { padding: 64px 0; }
+.milestone-list-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 48px; }
+.milestone-list-desc { color: var(--text-secondary); font-size: 15px; margin-top: 12px; max-width: 560px; }
+
+.milestone-card {
+  display: flex; flex-direction: column; padding: 24px;
+  text-decoration: none; color: inherit; transition: all 0.25s;
+}
+.milestone-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--gold); }
+.milestone-card-header { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+.milestone-progress-badge {
+  margin-left: auto; font-size: 12px; font-weight: 600;
+  color: var(--gold); background: rgba(201,168,76,0.1);
+  padding: 4px 10px; border-radius: 2px;
+}
+
+.milestone-steps { display: flex; gap: 6px; margin: 16px 0; }
+.milestone-step {
+  flex: 1; height: 6px; border-radius: 3px;
+  background: var(--cream-dark); transition: background 0.3s;
+}
+.milestone-step.done { background: var(--gold); }
+.milestone-step.active { background: var(--navy); }

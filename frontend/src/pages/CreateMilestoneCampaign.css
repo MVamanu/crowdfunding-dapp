@@ -1,0 +1,30 @@
+.milestones-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.add-milestone-btn {
+  background: var(--navy); color: var(--white);
+  border: none; padding: 8px 16px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.add-milestone-btn:hover { background: var(--navy-light); }
+
+.milestone-item {
+  background: var(--cream); border-radius: var(--radius-lg);
+  border: 1px solid var(--border); padding: 20px;
+  margin-bottom: 16px; transition: border-color 0.2s;
+}
+.milestone-item:hover { border-color: var(--gold); }
+.milestone-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.milestone-num { font-size: 13px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; }
+.remove-milestone-btn {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; font-size: 14px; padding: 4px 8px;
+  border-radius: var(--radius); transition: all 0.2s;
+}
+.remove-milestone-btn:hover { background: #fdf0ee; color: var(--danger); }
+
+.total-goal {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; background: var(--navy); border-radius: var(--radius-lg);
+  margin-top: 8px;
+}
+.total-label { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); }
+.total-value { font-family: "Playfair Display", serif; font-size: 22px; font-weight: 700; color: var(--gold); }
