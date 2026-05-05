@@ -4,7 +4,9 @@ import { ethers } from "ethers";
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
+import "./Home.css";
 import "./AllCampaigns.css";
+import "../components/CampaignCard.css";
 
 const ETH_ADDRESS = "0x53EF55468DF1570952b7A07eF46926c3837e5770";
 const ETH_MILESTONE_ADDRESS = "0x50B8de29C8226a85c99b9679060A30a180277a1E";
@@ -179,7 +181,7 @@ export default function AllCampaigns({ solWallet }) {
           {loading ? (
             <div className="loading-state"><div className="loading-spinner"></div><p>Se incarca toate campaniile...</p></div>
           ) : filtered.length === 0 ? (
-            <div className="empty-state"><div className="empty-icon">◇</div><h3>Nicio campanie</h3><p>Incearca alt filtru.</p></div>
+            <div className="empty-state"><div className="empty-icon">ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â¡</div><h3>Nicio campanie</h3><p>Incearca alt filtru.</p></div>
           ) : (
             <div className="campaigns-grid">
               {filtered.map(c => {
