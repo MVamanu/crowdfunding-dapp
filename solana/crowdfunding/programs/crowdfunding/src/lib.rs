@@ -204,7 +204,7 @@ pub struct DonateMilestone<'info> {
     #[account(mut)]
     pub donor: Signer<'info>,
     #[account(
-        init, payer = donor, space = 8 + DonorRecord::LEN,
+        init_if_needed, payer = donor, space = 8 + DonorRecord::LEN,
         seeds = [b"donor", milestone_campaign.key().as_ref(), donor.key().as_ref()], bump
     )]
     pub donor_account: Account<'info, DonorRecord>,
