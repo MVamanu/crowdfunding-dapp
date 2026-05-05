@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-d428da5a2b1bf3526b7d9adc41d16922d4342e6f",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.4.4"
+  },
+  "userSourceNameMap": {
+    "contracts/CrowdfundingUnified.sol": "project/contracts/CrowdfundingUnified.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/CrowdfundingUnified.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ncontract CrowdfundingUnified {\n\n    struct Campaign {\n        address owner;\n        string title;\n        string description;\n        uint256 goalUSD;\n        uint256 amountRaisedETH;\n        bool isActive;\n        uint256 deadline;\n        string solanaAddress;\n    }\n\n    mapping(uint256 => Campaign) public campaigns;\n    mapping(uint256 => mapping(address => uint256)) public donations;\n    uint256 public campaignCount;\n\n    event CampaignCreated(uint256 indexed id, address owner, string title, uint256 goalUSD, string solanaAddress);\n    event DonationReceived(uint256 indexed id, address donor, uint256 amount);\n    event FundsWithdrawn(uint256 indexed id, address owner, uint256 amount);\n    event RefundIssued(uint256 indexed id, address donor, uint256 amount);\n\n    modifier onlyOwner(uint256 _id) {\n        require(campaigns[_id].owner == msg.sender, \"Nu esti proprietarul\");\n        _;\n    }\n\n    modifier campaignExists(uint256 _id) {\n        require(_id < campaignCount, \"Campania nu exista\");\n        _;\n    }\n\n    function createCampaign(\n        string memory _title,\n        string memory _description,\n        uint256 _goalUSD,\n        uint256 _durationDays,\n        string memory _solanaAddress\n    ) external returns (uint256) {\n        require(_goalUSD > 0, \"Goalul trebuie sa fie pozitiv\");\n        require(_durationDays > 0, \"Durata trebuie sa fie pozitiva\");\n\n        uint256 id = campaignCount++;\n        campaigns[id] = Campaign({\n            owner: msg.sender,\n            title: _title,\n            description: _description,\n            goalUSD: _goalUSD,\n            amountRaisedETH: 0,\n            isActive: true,\n            deadline: block.timestamp + (_durationDays * 1 days),\n            solanaAddress: _solanaAddress\n        });\n\n        emit CampaignCreated(id, msg.sender, _title, _goalUSD, _solanaAddress);\n        return id;\n    }\n\n    function donate(uint256 _id) external payable campaignExists(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(campaign.isActive, \"Campania nu este activa\");\n        require(block.timestamp < campaign.deadline, \"Campania a expirat\");\n        require(msg.value > 0, \"Donatie invalida\");\n\n        donations[_id][msg.sender] += msg.value;\n        campaign.amountRaisedETH += msg.value;\n\n        emit DonationReceived(_id, msg.sender, msg.value);\n    }\n\n    function withdraw(uint256 _id) external campaignExists(_id) onlyOwner(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(campaign.isActive, \"Campania nu este activa\");\n        require(campaign.amountRaisedETH > 0, \"Nu sunt fonduri de retras\");\n\n        campaign.isActive = false;\n        uint256 amount = campaign.amountRaisedETH;\n\n        (bool success, ) = payable(msg.sender).call{value: amount}(\"\");\n        require(success, \"Transfer esuat\");\n\n        emit FundsWithdrawn(_id, msg.sender, amount);\n    }\n\n    function refund(uint256 _id) external campaignExists(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(block.timestamp >= campaign.deadline, \"Campania inca ruleaza\");\n\n        uint256 amount = donations[_id][msg.sender];\n        require(amount > 0, \"Nu ai donatii de returnat\");\n\n        donations[_id][msg.sender] = 0;\n        (bool success, ) = payable(msg.sender).call{value: amount}(\"\");\n        require(success, \"Refund esuat\");\n\n        emit RefundIssued(_id, msg.sender, amount);\n    }\n\n    function getCampaign(uint256 _id) external view campaignExists(_id) returns (Campaign memory) {\n        return campaigns[_id];\n    }\n}\n"
+      }
+    }
+  }
+}
