@@ -1,33 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+/// @title CrowdfundingCrossMilestone - Milestone funding cross-chain ETH + SOL
+/// @author Marian Dumitru Vamanu
+/// @notice Campanie cu etape (milestones) care accepta donatii ETH direct si SOL inregistrat in USD
+/// @dev Votul se desfasoara pe Ethereum; donatiile SOL sunt agregate off-chain in frontend
+/// @dev Arhitectura: doua contracte separate + frontend agregator (fara oracle cross-chain)
 contract CrowdfundingCrossMilestone {
 
+    /// @notice Structura unui milestone cross-chain
     struct Milestone {
-        string title;
-        string description;
-        uint256 amountUSD;
-        bool completed;
-        bool approved;
-        uint256 votesFor;
-        uint256 votesAgainst;
-        uint256 votingDeadline;
-        bool votingActive;
+        string title;               ///< Titlul etapei
+        string description;         ///< Descrierea etapei
+        uint256 amountUSD;          ///< Suma alocata in USD
+        bool completed;             ///< Status finalizare
+        bool approved;              ///< Status aprobare prin vot
+        uint256 votesFor;           ///< Voturi pentru (in wei ETH donat)
+        uint256 votesAgainst;       ///< Voturi contra (in wei ETH donat)
+        uint256 votingDeadline;     ///< Termenul votului (timestamp)
+        bool votingActive;          ///< Status vot activ
     }
 
+    /// @notice Structura campaniei cross-chain cu milestone-uri
     struct Campaign {
-        address owner;
-        string title;
-        string description;
-        uint256 goalUSD;
-        uint256 amountRaisedETH;
-        uint256 amountRaisedSOLusd;
-        bool isActive;
-        uint256 deadline;
-        string solanaAddress;
-        uint256 milestoneCount;
-        uint256 currentMilestone;
-        string primaryChain;
+        address owner;                  ///< Proprietarul campaniei (adresa ETH)
+        string title;                   ///< Titlul campaniei
+        string description;             ///< Descrierea campaniei
+        uint256 goalUSD;                ///< Obiectivul total in USD
+        uint256 amountRaisedETH;        ///< Suma stransa in ETH (wei)
+        uint256 amountRaisedSOLusd;     ///< Echivalentul USD al donatiilor SOL
+        bool isActive;                  ///< Statusul campaniei
+        uint256 deadline;               ///< Termenul limita
+        string solanaAddress;           ///< Adresa Solana pentru donatii SOL
+        uint256 milestoneCount;         ///< Numarul de milestone-uri
+        uint256 currentMilestone;       ///< Indexul milestone-ului curent
+        string primaryChain;            ///< Blockchain-ul principal ("eth" sau "sol")
     }
 
     mapping(uint256 => Campaign) public campaigns;
@@ -36,11 +43,11 @@ contract CrowdfundingCrossMilestone {
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasVoted;
     uint256 public campaignCount;
 
-    event CampaignCreated(uint256 indexed id, address owner, string title, uint256 goalUSD);
-    event DonationETH(uint256 indexed id, address donor, uint256 amount);
+    event CampaignCreated(uint256 indexed id, address indexed owner, string title, uint256 goalUSD);
+    event DonationETH(uint256 indexed id, address indexed donor, uint256 amount);
     event SolDonationRecorded(uint256 indexed id, uint256 amountUSD);
     event MilestoneSubmitted(uint256 indexed id, uint256 milestoneId);
-    event VoteCast(uint256 indexed id, uint256 milestoneId, address voter, bool approve);
+    event VoteCast(uint256 indexed id, uint256 milestoneId, address indexed voter, bool approve);
     event MilestoneApproved(uint256 indexed id, uint256 milestoneId);
     event MilestoneRejected(uint256 indexed id, uint256 milestoneId);
 
@@ -54,6 +61,18 @@ contract CrowdfundingCrossMilestone {
         _;
     }
 
+    /// @notice Creeaza o campanie cross-chain cu milestone-uri
+    /// @dev Minimum 2 milestone-uri, goal in USD independent de volatilitatea crypto
+    /// @param _title Titlul campaniei
+    /// @param _description Descrierea campaniei
+    /// @param _goalUSD Obiectivul total in USD
+    /// @param _durationDays Durata in zile
+    /// @param _solanaAddress Adresa Solana pentru acceptarea donatiilor SOL
+    /// @param _primaryChain Blockchain-ul principal pentru vot ("eth")
+    /// @param _milestoneTitles Titlurile etapelor
+    /// @param _milestoneDescriptions Descrierile etapelor
+    /// @param _milestoneAmountsUSD Sumele in USD pentru fiecare etapa
+    /// @return ID-ul campaniei create
     function createCampaign(
         string memory _title,
         string memory _description,
@@ -103,6 +122,9 @@ contract CrowdfundingCrossMilestone {
         return id;
     }
 
+    /// @notice Doneaza ETH la campania cross-chain
+    /// @dev Donatorii ETH acumuleaza putere de vot pentru milestone-uri
+    /// @param _id ID-ul campaniei
     function donateETH(uint256 _id) external payable campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
@@ -114,11 +136,18 @@ contract CrowdfundingCrossMilestone {
         emit DonationETH(_id, msg.sender, msg.value);
     }
 
+    /// @notice Inregistreaza o donatie SOL ca echivalent USD pe Ethereum
+    /// @dev Apelat de proprietar dupa ce donatia SOL a fost confirmata pe Solana
+    /// @dev Arhitectura off-chain: proprietarul verifica tranzactia Solana si inregistreaza USD-ul
+    /// @param _id ID-ul campaniei
+    /// @param _amountUSD Echivalentul USD al donatiei SOL (calculat de frontend)
     function recordSolDonation(uint256 _id, uint256 _amountUSD) external campaignExists(_id) onlyOwner(_id) {
         campaigns[_id].amountRaisedSOLusd += _amountUSD;
         emit SolDonationRecorded(_id, _amountUSD);
     }
 
+    /// @notice Proprietarul submite milestone-ul curent pentru vot
+    /// @param _id ID-ul campaniei
     function submitMilestone(uint256 _id) external campaignExists(_id) onlyOwner(_id) {
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
@@ -133,6 +162,12 @@ contract CrowdfundingCrossMilestone {
         emit MilestoneSubmitted(_id, milestoneId);
     }
 
+    /// @notice Voteaza pentru sau contra aprobarii unui milestone
+    /// @dev Doar donatorii ETH pot vota; puterea de vot = suma donata in wei
+    /// @dev Donatorii SOL sunt informati prin frontend dar nu voteaza on-chain
+    /// @param _id ID-ul campaniei
+    /// @param _milestoneId Indexul milestone-ului
+    /// @param _approve true = aprobare, false = respingere
     function vote(uint256 _id, uint256 _milestoneId, bool _approve) external campaignExists(_id) {
         require(donations[_id][msg.sender] > 0, "Trebuie sa fii donator ETH");
         require(!hasVoted[_id][_milestoneId][msg.sender], "Ai votat deja");
@@ -150,10 +185,16 @@ contract CrowdfundingCrossMilestone {
         emit VoteCast(_id, _milestoneId, msg.sender, _approve);
     }
 
+    /// @notice Finalizeaza votul si elibereaza cota ETH daca e aprobat
+    /// @dev Elibereaza proportia ETH corespunzatoare milestone-ului (total / nr_milestone-uri)
+    /// @dev Pattern checks-effects-interactions respectat
+    /// @param _id ID-ul campaniei
+    /// @param _milestoneId Indexul milestone-ului
     function finalizeMilestone(uint256 _id, uint256 _milestoneId) external campaignExists(_id) {
         Milestone storage milestone = milestones[_id][_milestoneId];
         require(milestone.votingActive, "Votul nu este activ");
 
+        // EFFECTS
         milestone.votingActive = false;
 
         if (milestone.votesFor > milestone.votesAgainst) {
@@ -163,12 +204,14 @@ contract CrowdfundingCrossMilestone {
 
             if (campaigns[_id].amountRaisedETH > 0) {
                 uint256 share = campaigns[_id].amountRaisedETH / campaigns[_id].milestoneCount;
+
+                if (campaigns[_id].currentMilestone >= campaigns[_id].milestoneCount) {
+                    campaigns[_id].isActive = false;
+                }
+
+                // INTERACTIONS
                 (bool success, ) = payable(campaigns[_id].owner).call{value: share}("");
                 require(success, "Transfer esuat");
-            }
-
-            if (campaigns[_id].currentMilestone >= campaigns[_id].milestoneCount) {
-                campaigns[_id].isActive = false;
             }
 
             emit MilestoneApproved(_id, _milestoneId);
@@ -179,14 +222,17 @@ contract CrowdfundingCrossMilestone {
         }
     }
 
+    /// @notice Returneaza datele campaniei
     function getCampaign(uint256 _id) external view campaignExists(_id) returns (Campaign memory) {
         return campaigns[_id];
     }
 
+    /// @notice Returneaza datele unui milestone
     function getMilestone(uint256 _id, uint256 _milestoneId) external view returns (Milestone memory) {
         return milestones[_id][_milestoneId];
     }
 
+    /// @notice Returneaza suma donata de o adresa ETH specifica
     function getDonation(uint256 _id, address _donor) external view returns (uint256) {
         return donations[_id][_donor];
     }

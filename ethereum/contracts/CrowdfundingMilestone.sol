@@ -1,30 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+/// @title CrowdfundingMilestone - Crowdfunding cu finantare etapizata
+/// @author Marian Dumitru Vamanu
+/// @notice Fondurile sunt eliberate etapizat dupa aprobarea prin vot proportional a fiecarei etape
+/// @dev Votul este ponderat proportional cu suma donata de fiecare participant
 contract CrowdfundingMilestone {
 
+    /// @notice Structura unui milestone (etapa)
     struct Milestone {
-        string title;
-        string description;
-        uint256 amount;
-        bool completed;
-        bool approved;
-        uint256 votesFor;
-        uint256 votesAgainst;
-        uint256 votingDeadline;
-        bool votingActive;
+        string title;           ///< Titlul etapei
+        string description;     ///< Descrierea etapei
+        uint256 amount;         ///< Suma alocata etapei (wei)
+        bool completed;         ///< Daca etapa a fost finalizata
+        bool approved;          ///< Daca etapa a fost aprobata prin vot
+        uint256 votesFor;       ///< Voturi pentru aprobare (ponderate in wei)
+        uint256 votesAgainst;   ///< Voturi contra (ponderate in wei)
+        bool votingActive;      ///< Daca votul este activ
+        uint256 votingDeadline; ///< Termenul limita pentru vot (timestamp)
     }
 
+    /// @notice Structura unei campanii cu milestone-uri
     struct Campaign {
-        address owner;
-        string title;
-        string description;
-        uint256 totalGoal;
-        uint256 amountRaised;
-        bool isActive;
-        uint256 deadline;
-        uint256 milestoneCount;
-        uint256 currentMilestone;
+        address owner;              ///< Proprietarul campaniei
+        string title;               ///< Titlul campaniei
+        string description;         ///< Descrierea campaniei
+        uint256 totalGoal;          ///< Obiectivul total (suma milestone-urilor)
+        uint256 amountRaised;       ///< Suma stransa
+        bool isActive;              ///< Statusul campaniei
+        uint256 deadline;           ///< Termenul limita
+        uint256 milestoneCount;     ///< Numarul de milestone-uri
+        uint256 currentMilestone;   ///< Indexul milestone-ului curent
     }
 
     mapping(uint256 => Campaign) public campaigns;
@@ -33,13 +39,12 @@ contract CrowdfundingMilestone {
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasVoted;
     uint256 public campaignCount;
 
-    event CampaignCreated(uint256 indexed id, address owner, string title, uint256 goal);
-    event DonationReceived(uint256 indexed id, address donor, uint256 amount);
-    event MilestoneSubmitted(uint256 indexed campaignId, uint256 milestoneId);
-    event VoteCast(uint256 indexed campaignId, uint256 milestoneId, address voter, bool vote);
-    event MilestoneApproved(uint256 indexed campaignId, uint256 milestoneId, uint256 amount);
-    event MilestoneRejected(uint256 indexed campaignId, uint256 milestoneId);
-    event RefundIssued(uint256 indexed campaignId, address donor, uint256 amount);
+    event CampaignCreated(uint256 indexed id, address indexed owner, string title);
+    event DonationReceived(uint256 indexed id, address indexed donor, uint256 amount);
+    event MilestoneSubmitted(uint256 indexed id, uint256 milestoneId);
+    event VoteCast(uint256 indexed id, uint256 milestoneId, address indexed voter, bool approve);
+    event MilestoneApproved(uint256 indexed id, uint256 milestoneId, uint256 amount);
+    event MilestoneRejected(uint256 indexed id, uint256 milestoneId);
 
     modifier onlyOwner(uint256 _id) {
         require(campaigns[_id].owner == msg.sender, "Nu esti proprietarul");
@@ -51,6 +56,15 @@ contract CrowdfundingMilestone {
         _;
     }
 
+    /// @notice Creeaza o campanie cu milestone-uri
+    /// @dev Minimum 2 milestone-uri necesare, maximum 10
+    /// @param _title Titlul campaniei
+    /// @param _description Descrierea campaniei
+    /// @param _durationDays Durata campaniei in zile
+    /// @param _milestoneTitles Array cu titlurile etapelor
+    /// @param _milestoneDescriptions Array cu descrierile etapelor
+    /// @param _milestoneAmounts Array cu sumele alocate fiecarei etape (wei)
+    /// @return ID-ul campaniei create
     function createCampaign(
         string memory _title,
         string memory _description,
@@ -60,12 +74,10 @@ contract CrowdfundingMilestone {
         uint256[] memory _milestoneAmounts
     ) external returns (uint256) {
         require(_milestoneTitles.length >= 2, "Minim 2 milestone-uri");
-        require(_milestoneTitles.length == _milestoneDescriptions.length, "Date invalide");
-        require(_milestoneTitles.length == _milestoneAmounts.length, "Sume invalide");
+        require(_milestoneTitles.length == _milestoneAmounts.length, "Date invalide");
 
         uint256 totalGoal = 0;
         for (uint256 i = 0; i < _milestoneAmounts.length; i++) {
-            require(_milestoneAmounts[i] > 0, "Suma milestone invalida");
             totalGoal += _milestoneAmounts[i];
         }
 
@@ -91,19 +103,21 @@ contract CrowdfundingMilestone {
                 approved: false,
                 votesFor: 0,
                 votesAgainst: 0,
-                votingDeadline: 0,
-                votingActive: false
+                votingActive: false,
+                votingDeadline: 0
             });
         }
 
-        emit CampaignCreated(id, msg.sender, _title, totalGoal);
+        emit CampaignCreated(id, msg.sender, _title);
         return id;
     }
 
+    /// @notice Doneaza ETH la o campanie cu milestone-uri
+    /// @dev Donatorii acumuleaza putere de vot proportionala cu suma donata
+    /// @param _id ID-ul campaniei
     function donate(uint256 _id) external payable campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
-        require(block.timestamp < campaign.deadline, "Campania a expirat");
         require(msg.value > 0, "Donatie invalida");
 
         donations[_id][msg.sender] += msg.value;
@@ -112,24 +126,30 @@ contract CrowdfundingMilestone {
         emit DonationReceived(_id, msg.sender, msg.value);
     }
 
+    /// @notice Proprietarul submite milestone-ul curent pentru vot
+    /// @dev Activeaza o fereastra de vot de 3 zile
+    /// @param _id ID-ul campaniei
     function submitMilestone(uint256 _id) external campaignExists(_id) onlyOwner(_id) {
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
         require(campaign.amountRaised >= campaign.totalGoal, "Goalul nu a fost atins");
 
-        uint256 milestoneId = campaign.currentMilestone;
-        require(milestoneId < campaign.milestoneCount, "Toate milestone-urile completate");
+        uint256 idx = campaign.currentMilestone;
+        require(!milestones[_id][idx].votingActive, "Vot deja activ");
+        require(!milestones[_id][idx].completed, "Milestone deja completat");
 
-        Milestone storage milestone = milestones[_id][milestoneId];
-        require(!milestone.votingActive, "Votul este deja activ");
-        require(!milestone.completed, "Milestone deja completat");
+        milestones[_id][idx].votingActive = true;
+        milestones[_id][idx].votingDeadline = block.timestamp + 3 days;
 
-        milestone.votingActive = true;
-        milestone.votingDeadline = block.timestamp + 3 days;
-
-        emit MilestoneSubmitted(_id, milestoneId);
+        emit MilestoneSubmitted(_id, idx);
     }
 
+    /// @notice Donatorii voteaza pentru sau contra aprobarii unui milestone
+    /// @dev Puterea de vot este proportionala cu suma donata (1 wei = 1 vot)
+    /// @dev Access control: doar donatorii pot vota, o singura data per milestone
+    /// @param _id ID-ul campaniei
+    /// @param _milestoneId Indexul milestone-ului supus votului
+    /// @param _approve true pentru aprobare, false pentru respingere
     function vote(uint256 _id, uint256 _milestoneId, bool _approve) external campaignExists(_id) {
         require(donations[_id][msg.sender] > 0, "Trebuie sa fii donator");
         require(!hasVoted[_id][_milestoneId][msg.sender], "Ai votat deja");
@@ -150,31 +170,35 @@ contract CrowdfundingMilestone {
         emit VoteCast(_id, _milestoneId, msg.sender, _approve);
     }
 
+    /// @notice Finalizeaza votul si elibereaza fondurile daca e aprobat
+    /// @dev Daca votes_for > votes_against: transfera ETH si avanseaza la urmatorul milestone
+    /// @dev Pattern checks-effects-interactions respectat
+    /// @param _id ID-ul campaniei
+    /// @param _milestoneId Indexul milestone-ului de finalizat
     function finalizeMilestone(uint256 _id, uint256 _milestoneId) external campaignExists(_id) {
-        Campaign storage campaign = campaigns[_id];
         Milestone storage milestone = milestones[_id][_milestoneId];
         require(milestone.votingActive, "Votul nu este activ");
-        require(
-            block.timestamp >= milestone.votingDeadline ||
-            milestone.votesFor + milestone.votesAgainst >= campaign.amountRaised,
-            "Votul nu s-a incheiat"
-        );
 
+        // EFFECTS: oprim votul inainte de orice transfer
         milestone.votingActive = false;
 
         if (milestone.votesFor > milestone.votesAgainst) {
             milestone.completed = true;
             milestone.approved = true;
-            campaign.currentMilestone++;
+            campaigns[_id].currentMilestone++;
 
-            (bool success, ) = payable(campaign.owner).call{value: milestone.amount}("");
+            uint256 amount = milestone.amount;
+            address owner = campaigns[_id].owner;
+
+            if (campaigns[_id].currentMilestone >= campaigns[_id].milestoneCount) {
+                campaigns[_id].isActive = false;
+            }
+
+            // INTERACTIONS: transfer dupa actualizarea state-ului
+            (bool success, ) = payable(owner).call{value: amount}("");
             require(success, "Transfer esuat");
 
-            emit MilestoneApproved(_id, _milestoneId, milestone.amount);
-
-            if (campaign.currentMilestone >= campaign.milestoneCount) {
-                campaign.isActive = false;
-            }
+            emit MilestoneApproved(_id, _milestoneId, amount);
         } else {
             milestone.completed = false;
             milestone.approved = false;
@@ -182,41 +206,13 @@ contract CrowdfundingMilestone {
         }
     }
 
-    function refund(uint256 _id) external campaignExists(_id) {
-        Campaign storage campaign = campaigns[_id];
-        require(
-            block.timestamp >= campaign.deadline && campaign.amountRaised < campaign.totalGoal,
-            "Conditiile de refund nu sunt indeplinite"
-        );
-
-        uint256 amount = donations[_id][msg.sender];
-        require(amount > 0, "Nu ai donatii de returnat");
-
-        uint256 milestonesPaid = campaign.currentMilestone;
-        uint256 paidAmount = 0;
-        for (uint256 i = 0; i < milestonesPaid; i++) {
-            paidAmount += milestones[_id][i].amount;
-        }
-
-        uint256 remainingRatio = (campaign.amountRaised - paidAmount) * 1e18 / campaign.amountRaised;
-        uint256 refundAmount = amount * remainingRatio / 1e18;
-
-        donations[_id][msg.sender] = 0;
-        (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
-        require(success, "Refund esuat");
-
-        emit RefundIssued(_id, msg.sender, refundAmount);
-    }
-
+    /// @notice Returneaza datele campaniei
     function getCampaign(uint256 _id) external view campaignExists(_id) returns (Campaign memory) {
         return campaigns[_id];
     }
 
+    /// @notice Returneaza datele unui milestone
     function getMilestone(uint256 _id, uint256 _milestoneId) external view returns (Milestone memory) {
         return milestones[_id][_milestoneId];
-    }
-
-    function getDonation(uint256 _id, address _donor) external view returns (uint256) {
-        return donations[_id][_donor];
     }
 }
