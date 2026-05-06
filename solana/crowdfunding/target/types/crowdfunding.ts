@@ -15,6 +15,17 @@ export type Crowdfunding = {
   "instructions": [
     {
       "name": "createCampaign",
+      "docs": [
+        "Creeaza o campanie simpla de crowdfunding pe Solana",
+        "",
+        "# Argumente",
+        "* `title` - Titlul campaniei",
+        "* `description` - Descrierea campaniei",
+        "* `goal` - Obiectivul in lamports (1 SOL = 1_000_000_000 lamports)",
+        "",
+        "# Erori",
+        "Nu are restrictii speciale — orice utilizator poate crea o campanie"
+      ],
       "discriminator": [
         111,
         131,
@@ -28,11 +39,17 @@ export type Crowdfunding = {
       "accounts": [
         {
           "name": "campaign",
+          "docs": [
+            "Contul campaniei — initializat cu spatiu pentru Campaign::LEN bytes"
+          ],
           "writable": true,
           "signer": true
         },
         {
           "name": "owner",
+          "docs": [
+            "Proprietarul campaniei — plateste rent pentru cont"
+          ],
           "writable": true,
           "signer": true
         },
@@ -58,6 +75,25 @@ export type Crowdfunding = {
     },
     {
       "name": "createMilestoneCampaign",
+      "docs": [
+        "Creeaza o campanie cu finantare etapizata (milestone-based)",
+        "",
+        "# Argumente",
+        "* `title` - Titlul campaniei",
+        "* `description` - Descrierea campaniei",
+        "* `milestone_titles` - Vec cu titlurile etapelor (min 2, max 5)",
+        "* `milestone_descriptions` - Vec cu descrierile etapelor",
+        "* `milestone_amounts` - Vec cu sumele in lamports pentru fiecare etapa",
+        "",
+        "# Structura",
+        "Goal-ul total este suma tuturor milestone_amounts",
+        "Etapele sunt stocate intr-un array fix de 5 elemente (Milestone::LEN)",
+        "",
+        "# Erori",
+        "* `TooFewMilestones` - Mai putin de 2 etape",
+        "* `TooManyMilestones` - Mai mult de 5 etape",
+        "* `InvalidData` - Lungimile array-urilor nu coincid"
+      ],
       "discriminator": [
         145,
         252,
@@ -115,6 +151,19 @@ export type Crowdfunding = {
     },
     {
       "name": "donate",
+      "docs": [
+        "Doneaza SOL catre o campanie activa",
+        "",
+        "# Argumente",
+        "* `amount` - Suma in lamports de donat",
+        "",
+        "# Securitate",
+        "Transferul se face via SystemProgram::transfer (nu direct)",
+        "Aceasta abordare este sigura si auditabila on-chain",
+        "",
+        "# Erori",
+        "* `CampaignInactive` - Campania nu este activa"
+      ],
       "discriminator": [
         121,
         186,
@@ -149,6 +198,22 @@ export type Crowdfunding = {
     },
     {
       "name": "donateMilestone",
+      "docs": [
+        "Doneaza SOL la o campanie cu milestone-uri",
+        "",
+        "# Securitate — PDA Donor Record",
+        "Contul `donor_account` este un PDA derivat din:",
+        "`[\"donor\", campaign_pubkey, donor_pubkey]`",
+        "Aceasta garanteaza ca fiecare donator are un singur cont per campanie,",
+        "imposibil de falsificat fara cheile corecte.",
+        "",
+        "# Putere de vot",
+        "Suma donata acumuleaza putere de vot pentru milestone-uri:",
+        "`donor_account.amount` = puterea de vot totala a donatorului",
+        "",
+        "# Erori",
+        "* `CampaignInactive` - Campania nu este activa"
+      ],
       "discriminator": [
         228,
         138,
@@ -209,6 +274,24 @@ export type Crowdfunding = {
     },
     {
       "name": "finalizeMilestone",
+      "docs": [
+        "Finalizeaza votul si elibereaza fondurile daca milestone-ul e aprobat",
+        "",
+        "# Logica de finalizare",
+        "* Daca `votes_for > votes_against`: milestone aprobat",
+        "- Transfera suma milestone-ului catre owner",
+        "- Incrementeaza `current_milestone`",
+        "- Daca toate etapele sunt complete, seteaza `is_active = false`",
+        "* Altfel: milestone respins (poate fi resubmis)",
+        "",
+        "# Transfer SOL",
+        "Transferul se face direct prin modificarea lamports-urilor conturilor:",
+        "`campaign.lamports -= amount`",
+        "`owner.lamports += amount`",
+        "",
+        "# Erori",
+        "* `VotingNotActive` - Votul nu este activ"
+      ],
       "discriminator": [
         7,
         134,
@@ -239,6 +322,23 @@ export type Crowdfunding = {
     },
     {
       "name": "submitMilestone",
+      "docs": [
+        "Proprietarul submite milestone-ul curent pentru aprobare prin vot",
+        "",
+        "# Conditii",
+        "* Apelantul trebuie sa fie owner-ul campaniei",
+        "* Campania trebuie sa fie activa",
+        "* Goalul total trebuie sa fi fost atins",
+        "* Milestone-ul curent nu trebuie sa aiba vot activ",
+        "",
+        "# Fereastra de vot",
+        "Se deschide o fereastra de vot de 3 zile (3 * 24 * 3600 secunde)",
+        "",
+        "# Erori",
+        "* `Unauthorized` - Nu esti owner",
+        "* `GoalNotReached` - Goalul nu a fost atins",
+        "* `VotingAlreadyActive` - Vot deja activ pentru aceasta etapa"
+      ],
       "discriminator": [
         35,
         96,
@@ -264,6 +364,29 @@ export type Crowdfunding = {
     },
     {
       "name": "voteMilestone",
+      "docs": [
+        "Voteaza pentru sau contra aprobarii milestone-ului curent",
+        "",
+        "# Mecanismul de vot",
+        "Votul este ponderat proportional cu suma donata:",
+        "* `votes_for` += donor_amount (daca approve = true)",
+        "* `votes_against` += donor_amount (daca approve = false)",
+        "",
+        "# Securitate — PDA Vote Record",
+        "Contul `vote_record` este un PDA derivat din:",
+        "`[\"vote\", campaign_pubkey, voter_pubkey, milestone_idx]`",
+        "Garanteaza ca fiecare donator voteaza o singura data per milestone.",
+        "",
+        "# Argumente",
+        "* `milestone_idx` - Indexul milestone-ului (0-based)",
+        "* `approve` - true = pentru, false = contra",
+        "",
+        "# Erori",
+        "* `NotADonor` - Nu ai donat la aceasta campanie",
+        "* `AlreadyVoted` - Ai votat deja pentru acest milestone",
+        "* `VotingNotActive` - Votul nu este activ",
+        "* `VotingExpired` - Fereastra de vot a expirat"
+      ],
       "discriminator": [
         43,
         27,
@@ -331,6 +454,18 @@ export type Crowdfunding = {
     },
     {
       "name": "withdraw",
+      "docs": [
+        "Retrage fondurile dupa atingerea goalului",
+        "",
+        "# Securitate",
+        "* Verifica ca apelantul este owner-ul campaniei",
+        "* Verifica ca goalul a fost atins",
+        "* Seteaza is_active = false inainte de transfer (protectie reentrancy)",
+        "",
+        "# Erori",
+        "* `Unauthorized` - Apelantul nu este owner",
+        "* `GoalNotReached` - Goalul nu a fost atins"
+      ],
       "discriminator": [
         183,
         18,
@@ -474,6 +609,9 @@ export type Crowdfunding = {
   "types": [
     {
       "name": "campaign",
+      "docs": [
+        "Campanie simpla de crowdfunding pe Solana"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -506,6 +644,12 @@ export type Crowdfunding = {
     },
     {
       "name": "donorRecord",
+      "docs": [
+        "Inregistrarea donatiei unui participant (PDA)",
+        "",
+        "Derivat din seeds: [\"donor\", campaign, donor]",
+        "Stocheaza suma totala donata — folosita ca putere de vot"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -526,6 +670,9 @@ export type Crowdfunding = {
     },
     {
       "name": "milestone",
+      "docs": [
+        "O etapa (milestone) dintr-o campanie cu finantare etapizata"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -570,6 +717,9 @@ export type Crowdfunding = {
     },
     {
       "name": "milestoneCampaign",
+      "docs": [
+        "Campanie cu finantare etapizata pe Solana"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -623,6 +773,12 @@ export type Crowdfunding = {
     },
     {
       "name": "voteRecord",
+      "docs": [
+        "Inregistrarea votului unui participant (PDA)",
+        "",
+        "Derivat din seeds: [\"vote\", campaign, voter, milestone_idx]",
+        "Garanteaza unicitatea votului per (donator, milestone)"
+      ],
       "type": {
         "kind": "struct",
         "fields": [
