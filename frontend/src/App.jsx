@@ -23,6 +23,7 @@ import { VersionProvider } from "./context/VersionContext";
 import AllCampaignsV2 from "./pages/v2/AllCampaignsV2";
 import CreateCampaignV2 from "./pages/v2/CreateCampaignV2";
 import CampaignDetailV2 from "./pages/v2/CampaignDetailV2";
+import CreateSolanaUsdcCampaign from "./pages/v2/CreateSolanaUsdcCampaign";
 import "./index.css";
 
 const ETH_CONTRACT_ADDRESS = "0x53EF55468DF1570952b7A07eF46926c3837e5770";
@@ -149,8 +150,10 @@ export default function App() {
         <Route path="/create-cross-milestone" element={<CreateCrossMilestone ethConnected={ethConnected} solAddress={solAddress} />} />
         <Route path="/cross-milestone/:id" element={<CrossMilestoneDetail {...commonProps} />} />
         <Route path="/v2" element={<AllCampaignsV2 />} />
+        <Route path="/v2/create/eth" element={<CreateCampaignV2 ethConnected={ethConnected} />} />
+        <Route path="/v2/create/sol" element={<CreateSolanaUsdcCampaign solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/v2/create" element={<CreateCampaignV2 ethConnected={ethConnected} />} />
-        <Route path="/v2/campaign/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
+        <Route path="/v2/campaign/:blockchain/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/create" element={
           <CreateCampaign ethContract={ethContract} ethConnected={ethConnected}
             solConnected={solConnected} solWallet={solWallet} solWalletName={solWalletName} />

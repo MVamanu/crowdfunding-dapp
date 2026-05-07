@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
+import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
 import "../AllCampaigns.css";
 import "./V2.css";
 
 const STABLE_CONTRACT = "0x8FA441B88BC346427E34baf5B1b1E09ed1700f3c";
 const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
+const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
 const STABLE_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goal,uint256 amountRaised,bool isActive,uint256 deadline,bool goalReached))",
   "function campaignCount() view returns (uint256)",
@@ -14,43 +17,76 @@ const STABLE_ABI = [
 export default function AllCampaignsV2() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     async function load() {
       setLoading(true);
+      const all = [];
+
+      // ETH USDC campanii
       try {
         const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
         const contract = new ethers.Contract(STABLE_CONTRACT, STABLE_ABI, provider);
         const count = await contract.campaignCount();
-        const results = [];
         for (let i = 0; i < Number(count); i++) {
           const c = await contract.getCampaign(i);
-          results.push({
-            id: i, title: c.title, description: c.description,
-            goal: c.goal, amountRaised: c.amountRaised,
+          all.push({
+            id: `eth-${i}`, title: c.title, description: c.description,
+            goal: Number(c.goal), amountRaised: Number(c.amountRaised),
             isActive: c.isActive, owner: c.owner,
             deadline: new Date(Number(c.deadline) * 1000),
             goalReached: c.goalReached,
+            blockchain: "eth",
+            route: `/v2/campaign/eth/${i}`,
           });
         }
-        setCampaigns(results);
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("ETH USDC:", e); }
+
+      // Solana USDC campanii
+      try {
+        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const dummyWallet = { publicKey: PublicKey.default, signTransaction: async t => t, signAllTransactions: async t => t };
+        const prov = new anchor.AnchorProvider(connection, dummyWallet, { commitment: "confirmed" });
+        anchor.setProvider(prov);
+        const idl = await anchor.Program.fetchIdl(SOL_PROGRAM_ID, prov);
+        if (idl) {
+          const program = new anchor.Program(idl, prov);
+          const accounts = await program.account.usdcCampaign.all();
+          for (const acc of accounts) {
+            const d = acc.account;
+            all.push({
+              id: `sol-${acc.publicKey.toString()}`,
+              title: d.title, description: d.description,
+              goal: Number(d.goal), amountRaised: Number(d.amountRaised),
+              isActive: d.isActive, owner: d.owner.toString(),
+              deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              goalReached: d.goalReached,
+              blockchain: "sol",
+              route: `/v2/campaign/sol/${acc.publicKey.toString()}`,
+            });
+          }
+        }
+      } catch (e) { console.error("SOL USDC:", e); }
+
+      setCampaigns(all);
       setLoading(false);
     }
     load();
   }, []);
 
-  const totalRaised = campaigns.reduce((s, c) => s + Number(c.amountRaised), 0);
+  const filtered = campaigns.filter(c => filter === "all" || c.blockchain === filter);
+  const totalRaised = campaigns.reduce((s, c) => s + c.amountRaised, 0);
 
   return (
     <div className="all-campaigns-page">
       <section className="hero v2-hero">
         <div className="container">
           <div className="hero-content">
-            <div className="v2-badge">v2 — USDC Stablecoin</div>
-            <h1 className="hero-title">Crowdfunding Stabil,<br/>Fara Volatilitate.</h1>
+            <div className="v2-badge">v2 — USDC Cross-Chain</div>
+            <h1 className="hero-title">Crowdfunding Stabil,<br/>pe ETH si SOL.</h1>
             <div className="divider"></div>
-            <p className="hero-desc">Campanii in USDC — valoarea donata este exact valoarea primita. Fara riscul deprecierii crypto.</p>
+            <p className="hero-desc">Campanii in USDC pe Ethereum si Solana — valoare stabila, fara volatilitate crypto.</p>
           </div>
           <div className="hero-stats">
             <div className="hero-stat">
@@ -64,8 +100,8 @@ export default function AllCampaignsV2() {
             </div>
             <div className="hero-stat-divider"></div>
             <div className="hero-stat">
-              <span className="hero-stat-value">USDC</span>
-              <span className="hero-stat-label">Stablecoin</span>
+              <span className="hero-stat-value">2</span>
+              <span className="hero-stat-label">Blockchain-uri</span>
             </div>
           </div>
         </div>
@@ -78,31 +114,42 @@ export default function AllCampaignsV2() {
               <h2 className="section-title">Campanii USDC</h2>
               <div className="divider"></div>
             </div>
-            <Link to="/v2/create" className="btn-usdc">+ Campanie Noua</Link>
+            <div style={{display:"flex", gap:"8px", alignItems:"center", flexWrap:"wrap"}}>
+              <div className="filter-tabs">
+                {[["all","Toate"],["eth","Ethereum"],["sol","Solana"]].map(([v,l]) => (
+                  <button key={v} className={filter === v ? "filter-tab active" : "filter-tab"} onClick={() => setFilter(v)}>{l}</button>
+                ))}
+              </div>
+              <Link to="/v2/create/eth" className="btn-usdc" style={{whiteSpace:"nowrap"}}>+ ETH USDC</Link>
+              <Link to="/v2/create/sol" className="btn-usdc" style={{whiteSpace:"nowrap", background:"#9945ff"}}>+ SOL USDC</Link>
+            </div>
           </div>
 
           {loading ? (
             <div className="loading-state"><div className="loading-spinner"></div><p>Se incarca...</p></div>
-          ) : campaigns.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">◇</div>
               <h3>Nicio campanie USDC</h3>
               <p>Fii primul care lanseaza o campanie in stablecoin.</p>
-              <Link to="/v2/create" className="btn-usdc" style={{display:"inline-block", marginTop:"16px"}}>Creeaza prima campanie</Link>
+              <div style={{display:"flex", gap:"12px", justifyContent:"center", marginTop:"16px"}}>
+                <Link to="/v2/create/eth" className="btn-usdc">+ ETH USDC</Link>
+                <Link to="/v2/create/sol" className="btn-usdc" style={{background:"#9945ff"}}>+ SOL USDC</Link>
+              </div>
             </div>
           ) : (
             <div className="campaigns-grid">
-              {campaigns.map(c => {
-                const progress = Math.min(Number(c.goal) > 0 ? (Number(c.amountRaised) / Number(c.goal)) * 100 : 0, 100);
+              {filtered.map(c => {
+                const progress = Math.min(c.goal > 0 ? (c.amountRaised / c.goal) * 100 : 0, 100);
                 const daysLeft = Math.max(0, Math.ceil((c.deadline - Date.now()) / 86400000));
-                const goalUSDC = (Number(c.goal) / 1_000_000).toFixed(2);
-                const raisedUSDC = (Number(c.amountRaised) / 1_000_000).toFixed(2);
+                const goalUSDC = (c.goal / 1_000_000).toFixed(2);
+                const raisedUSDC = (c.amountRaised / 1_000_000).toFixed(2);
                 return (
-                  <Link to={`/v2/campaign/${c.id}`} key={c.id} className="campaign-card card v2-card">
+                  <Link to={c.route} key={c.id} className="campaign-card card v2-card">
                     <div className="card-header">
                       <div className="card-badges">
                         <span className="badge badge-usdc">USDC</span>
-                        <span className="badge badge-eth">ETH</span>
+                        <span className={`badge badge-${c.blockchain}`}>{c.blockchain.toUpperCase()}</span>
                         <span className={`badge badge-${c.isActive ? "active" : "inactive"}`}>
                           {c.goalReached ? "Goal Atins" : c.isActive ? "Activa" : "Inchisa"}
                         </span>
@@ -119,10 +166,7 @@ export default function AllCampaignsV2() {
                         <div className="progress-fill v2-fill" style={{width:`${progress}%`}}></div>
                       </div>
                       <div className="card-stats">
-                        <div>
-                          <span className="stat-value">{progress.toFixed(1)}%</span>
-                          <span className="stat-label">funded</span>
-                        </div>
+                        <div><span className="stat-value">{progress.toFixed(1)}%</span><span className="stat-label">funded</span></div>
                         <div style={{textAlign:"right"}}>
                           <span className="stat-value">${raisedUSDC}</span>
                           <span className="stat-label">of ${goalUSDC} USDC</span>
