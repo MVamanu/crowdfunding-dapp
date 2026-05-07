@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { network } from "hardhat";
 
@@ -21,7 +21,7 @@ describe("Crowdfunding", async function () {
       const contract = await viem.deployContract("Crowdfunding");
       await assert.rejects(
         contract.write.createCampaign(["Test", "Descriere", 0n, 30n]),
-        /Obiectivul trebuie sa fie pozitiv/
+        /Goalul trebuie sa fie pozitiv/
       );
     });
 
@@ -70,7 +70,7 @@ describe("Crowdfunding", async function () {
       await contract.write.donate([0n], { value: 1000000000000000000n, account: walletClients[1].account });
       await assert.rejects(
         contract.write.withdraw([0n]),
-        /Obiectivul nu a fost atins/
+        /Goalul nu a fost atins/
       );
     });
 

@@ -1,8 +1,17 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useVersion } from "../context/VersionContext";
 import "./Navbar.css";
 
 export default function Navbar({ ethConnected, solConnected, ethAddress, solAddress, solWalletName, onConnectEth, onConnectSol, onConnectSolflare }) {
   const location = useLocation();
+  const { version, switchVersion } = useVersion();
+  const navigate = useNavigate();
+
+  function handleVersionSwitch(v) {
+    switchVersion(v);
+    if (v === "v2") navigate("/v2");
+    else navigate("/");
+  }
   const isActive = (paths) => paths.some(p => location.pathname === p || location.pathname.startsWith(p));
 
   return (
@@ -17,11 +26,36 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
           </svg>
           <span className="brand-name">FundChain</span>
         </Link>
+
         <div className="navbar-links">
-          <Link to="/" className={isActive(["/"]) ? "nav-link active" : "nav-link"}>Campanii</Link>
-          <Link to="/ong" className={isActive(["/ong", "/create-ong"]) ? "nav-link active" : "nav-link"}>ONG / Fundatii</Link>
-          <Link to="/kickstart" className={isActive(["/kickstart", "/create-kickstart", "/milestone", "/solana-milestone"]) ? "nav-link active" : "nav-link"}>Kickstart</Link>
+          <Link to="/" className={isActive(["/"]) && !location.pathname.includes("v2") ? "nav-link active" : "nav-link"}>
+            Campanii
+          </Link>
+          <Link to="/ong" className={isActive(["/ong", "/create-ong"]) ? "nav-link active" : "nav-link"}>
+            ONG / Fundatii
+          </Link>
+          <Link to="/kickstart" className={isActive(["/kickstart", "/create-kickstart", "/milestone", "/solana-milestone"]) ? "nav-link active" : "nav-link"}>
+            Kickstart
+          </Link>
         </div>
+
+        <div className="version-switcher">
+          <button
+            className={version === "v1" ? "version-btn active" : "version-btn"}
+            onClick={() => handleVersionSwitch("v1")}
+            title="ETH / SOL - Campanii native crypto"
+          >
+            v1 <span className="version-label">ETH/SOL</span>
+          </button>
+          <button
+            className={version === "v2" ? "version-btn active v2" : "version-btn v2"}
+            onClick={() => handleVersionSwitch("v2")}
+            title="USDC - Campanii in stablecoin"
+          >
+            v2 <span className="version-label">USDC</span>
+          </button>
+        </div>
+
         <div className="navbar-wallets">
           <button className={ethConnected ? "wallet-btn connected" : "wallet-btn"} onClick={onConnectEth}>
             <span className="wallet-dot eth-dot"></span>

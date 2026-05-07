@@ -66,3 +66,71 @@
 .sol-wallet-group { display: flex; gap: 6px; }
 .solflare-btn { }
 .solflare-dot { background: #FC8B00 !important; }
+
+.version-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 20px;
+  padding: 3px;
+}
+.version-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.version-btn:hover { color: rgba(255,255,255,0.8); }
+.version-btn.active {
+  background: var(--gold);
+  color: var(--navy);
+}
+.version-btn.v2.active {
+  background: #2775CA;
+  color: white;
+}
+.version-label { font-size: 10px; opacity: 0.8; }
+
+.version-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 20px;
+  padding: 3px;
+}
+.version-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.version-btn:hover { color: rgba(255,255,255,0.8); }
+.version-btn.active {
+  background: var(--gold);
+  color: var(--navy);
+}
+.version-btn.v2.active {
+  background: #2775CA;
+  color: white;
+}
+.version-label { font-size: 10px; opacity: 0.8; }

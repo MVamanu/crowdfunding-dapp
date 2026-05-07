@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-261782c8cab090068ef2ef2f37f9fb79030540d6",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.4.4"
+  },
+  "userSourceNameMap": {
+    "contracts/CrowdfundingStable.sol": "project/contracts/CrowdfundingStable.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/CrowdfundingStable.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\n/// @title IERC20 - Interfata minima pentru token ERC-20\n/// @dev Folosita pentru interactiunea cu USDC pe Sepolia\ninterface IERC20 {\n    function transferFrom(address from, address to, uint256 amount) external returns (bool);\n    function transfer(address to, uint256 amount) external returns (bool);\n    function balanceOf(address account) external view returns (uint256);\n    function allowance(address owner, address spender) external view returns (uint256);\n}\n\n/// @title CrowdfundingStable - Crowdfunding cu stablecoin (USDC)\n/// @author Marian Dumitru Vamanu\n/// @notice Campanii de strangere fonduri in USDC - elimina riscul de volatilitate crypto\n/// @dev Foloseste ERC-20 transferFrom pattern: donator trebuie sa apeleze approve() inainte de donate()\n/// @dev USDC pe Sepolia: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238\ncontract CrowdfundingStable {\n\n    /// @notice Token-ul stablecoin acceptat (USDC)\n    IERC20 public immutable stableToken;\n\n    /// @notice Numarul de zecimale al token-ului (USDC = 6 zecimale)\n    uint8 public immutable tokenDecimals;\n\n    /// @notice Structura unei campanii USDC\n    struct Campaign {\n        address owner;          ///< Proprietarul campaniei\n        string title;           ///< Titlul campaniei\n        string description;     ///< Descrierea campaniei\n        uint256 goal;           ///< Obiectivul in USDC (cu 6 zecimale: 100 USDC = 100_000_000)\n        uint256 amountRaised;   ///< Suma stransa in USDC\n        bool isActive;          ///< Statusul campaniei\n        uint256 deadline;       ///< Termenul limita (timestamp Unix)\n        bool goalReached;       ///< Daca goalul a fost atins\n    }\n\n    mapping(uint256 => Campaign) public campaigns;\n    mapping(uint256 => mapping(address => uint256)) public donations;\n    uint256 public campaignCount;\n\n    event CampaignCreated(uint256 indexed id, address indexed owner, string title, uint256 goal);\n    event DonationReceived(uint256 indexed id, address indexed donor, uint256 amount);\n    event FundsWithdrawn(uint256 indexed id, address indexed owner, uint256 amount);\n    event RefundIssued(uint256 indexed id, address indexed donor, uint256 amount);\n\n    modifier onlyOwner(uint256 _id) {\n        require(campaigns[_id].owner == msg.sender, \"Nu esti proprietarul\");\n        _;\n    }\n\n    modifier campaignExists(uint256 _id) {\n        require(_id < campaignCount, \"Campania nu exista\");\n        _;\n    }\n\n    /// @notice Initializeaza contractul cu adresa token-ului stablecoin\n    /// @param _stableToken Adresa contractului USDC pe reteaua curenta\n    /// @param _tokenDecimals Numarul de zecimale (6 pentru USDC)\n    constructor(address _stableToken, uint8 _tokenDecimals) {\n        require(_stableToken != address(0), \"Adresa invalida\");\n        stableToken = IERC20(_stableToken);\n        tokenDecimals = _tokenDecimals;\n    }\n\n    /// @notice Creeaza o campanie noua cu goal in USDC\n    /// @param _title Titlul campaniei\n    /// @param _description Descrierea campaniei\n    /// @param _goal Obiectivul in unitati USDC (ex: 100 USDC = 100_000_000 cu 6 zecimale)\n    /// @param _durationDays Durata campaniei in zile\n    /// @return ID-ul campaniei create\n    function createCampaign(\n        string memory _title,\n        string memory _description,\n        uint256 _goal,\n        uint256 _durationDays\n    ) external returns (uint256) {\n        require(_goal > 0, \"Goalul trebuie sa fie pozitiv\");\n        require(_durationDays > 0, \"Durata trebuie sa fie pozitiva\");\n\n        uint256 id = campaignCount++;\n        campaigns[id] = Campaign({\n            owner: msg.sender,\n            title: _title,\n            description: _description,\n            goal: _goal,\n            amountRaised: 0,\n            isActive: true,\n            deadline: block.timestamp + (_durationDays * 1 days),\n            goalReached: false\n        });\n\n        emit CampaignCreated(id, msg.sender, _title, _goal);\n        return id;\n    }\n\n    /// @notice Doneaza USDC la o campanie activa\n    /// @dev Donatorul trebuie sa apeleze USDC.approve(contractAddress, amount) inainte\n    /// @dev Pattern ERC-20: transferFrom muta tokens de la donator la contract\n    /// @param _id ID-ul campaniei\n    /// @param _amount Suma in USDC (cu 6 zecimale)\n    function donate(uint256 _id, uint256 _amount) external campaignExists(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(campaign.isActive, \"Campania nu este activa\");\n        require(block.timestamp < campaign.deadline, \"Campania a expirat\");\n        require(_amount > 0, \"Suma invalida\");\n        require(\n            stableToken.allowance(msg.sender, address(this)) >= _amount,\n            \"Allowance insuficient. Apeleaza approve() mai intai.\"\n        );\n\n        // CHECKS-EFFECTS-INTERACTIONS\n        donations[_id][msg.sender] += _amount;\n        campaign.amountRaised += _amount;\n\n        if (campaign.amountRaised >= campaign.goal) {\n            campaign.goalReached = true;\n        }\n\n        // INTERACTIONS: transfer ERC-20\n        require(\n            stableToken.transferFrom(msg.sender, address(this), _amount),\n            \"Transfer USDC esuat\"\n        );\n\n        emit DonationReceived(_id, msg.sender, _amount);\n    }\n\n    /// @notice Retrage fondurile USDC dupa atingerea goalului\n    /// @dev Pattern CEI: stare actualizata inainte de transfer\n    /// @param _id ID-ul campaniei\n    function withdraw(uint256 _id) external campaignExists(_id) onlyOwner(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(campaign.isActive, \"Campania nu este activa\");\n        require(campaign.goalReached, \"Goalul nu a fost atins\");\n\n        // EFFECTS\n        campaign.isActive = false;\n        uint256 amount = campaign.amountRaised;\n\n        // INTERACTIONS\n        require(\n            stableToken.transfer(msg.sender, amount),\n            \"Transfer USDC esuat\"\n        );\n\n        emit FundsWithdrawn(_id, msg.sender, amount);\n    }\n\n    /// @notice Returneaza donatia USDC daca campania a expirat fara goal\n    /// @param _id ID-ul campaniei\n    function refund(uint256 _id) external campaignExists(_id) {\n        Campaign storage campaign = campaigns[_id];\n        require(\n            block.timestamp >= campaign.deadline || !campaign.isActive,\n            \"Campania inca ruleaza\"\n        );\n        require(!campaign.goalReached, \"Goalul a fost atins - nu se poate face refund\");\n\n        uint256 amount = donations[_id][msg.sender];\n        require(amount > 0, \"Nu ai donatii de returnat\");\n\n        // EFFECTS\n        donations[_id][msg.sender] = 0;\n\n        // INTERACTIONS\n        require(\n            stableToken.transfer(msg.sender, amount),\n            \"Refund USDC esuat\"\n        );\n\n        emit RefundIssued(_id, msg.sender, amount);\n    }\n\n    /// @notice Returneaza datele complete ale campaniei\n    function getCampaign(uint256 _id) external view campaignExists(_id) returns (Campaign memory) {\n        return campaigns[_id];\n    }\n\n    /// @notice Returneaza suma donata de o adresa specifica\n    function getDonation(uint256 _id, address _donor) external view returns (uint256) {\n        return donations[_id][_donor];\n    }\n\n    /// @notice Returneaza balanta USDC a contractului\n    function getContractBalance() external view returns (uint256) {\n        return stableToken.balanceOf(address(this));\n    }\n}\n"
+      }
+    }
+  }
+}

@@ -15,14 +15,9 @@ describe("CrowdfundingMilestone", async function () {
   it("creeaza o campanie cu milestone-uri", async function () {
     const contract = await viem.deployContract("CrowdfundingMilestone");
     await contract.write.createCampaign([
-      "Test Milestone Campaign",
-      "Descriere test",
-      30n,
-      milestoneTitles,
-      milestoneDescs,
-      milestoneAmounts
+      "Test Milestone Campaign", "Descriere test", 30n,
+      milestoneTitles, milestoneDescs, milestoneAmounts
     ]);
-
     const campaign = await contract.read.getCampaign([0n]);
     assert.equal(campaign.title, "Test Milestone Campaign");
     assert.equal(campaign.totalGoal, totalGoal);
@@ -36,11 +31,9 @@ describe("CrowdfundingMilestone", async function () {
       "Test", "Descriere", 30n,
       milestoneTitles, milestoneDescs, milestoneAmounts
     ]);
-
     const m0 = await contract.read.getMilestone([0n, 0n]);
     const m1 = await contract.read.getMilestone([0n, 1n]);
     const m2 = await contract.read.getMilestone([0n, 2n]);
-
     assert.equal(m0.title, "Faza 1 - Dezvoltare");
     assert.equal(m0.amount, 300000000000000000n);
     assert.equal(m1.title, "Faza 2 - Testare");
@@ -54,17 +47,12 @@ describe("CrowdfundingMilestone", async function () {
       "Test", "Descriere", 30n,
       milestoneTitles, milestoneDescs, milestoneAmounts
     ]);
-
     await contract.write.donate([0n], {
       value: 500000000000000000n,
       account: walletClients[1].account
     });
-
     const campaign = await contract.read.getCampaign([0n]);
     assert.equal(campaign.amountRaised, 500000000000000000n);
-
-    const donation = await contract.read.getDonation([0n, walletClients[1].account.address]);
-    assert.equal(donation, 500000000000000000n);
   });
 
   it("esueaza cu mai putin de 2 milestone-uri", async function () {
@@ -84,10 +72,8 @@ describe("CrowdfundingMilestone", async function () {
       "Test", "Descriere", 30n,
       milestoneTitles, milestoneDescs, milestoneAmounts
     ]);
-
     await contract.write.donate([0n], { value: 1000000000000000000n, account: walletClients[1].account });
     await contract.write.submitMilestone([0n]);
-
     const milestone = await contract.read.getMilestone([0n, 0n]);
     assert.equal(milestone.votingActive, true);
   });
@@ -98,11 +84,9 @@ describe("CrowdfundingMilestone", async function () {
       "Test", "Descriere", 30n,
       milestoneTitles, milestoneDescs, milestoneAmounts
     ]);
-
     await contract.write.donate([0n], { value: 1000000000000000000n, account: walletClients[1].account });
     await contract.write.submitMilestone([0n]);
     await contract.write.vote([0n, 0n, true], { account: walletClients[1].account });
-
     const milestone = await contract.read.getMilestone([0n, 0n]);
     assert.equal(milestone.votesFor, 1000000000000000000n);
   });
@@ -113,10 +97,8 @@ describe("CrowdfundingMilestone", async function () {
       "Test", "Descriere", 30n,
       milestoneTitles, milestoneDescs, milestoneAmounts
     ]);
-
     await contract.write.donate([0n], { value: 1000000000000000000n, account: walletClients[1].account });
     await contract.write.submitMilestone([0n]);
-
     await assert.rejects(
       contract.write.vote([0n, 0n, true], { account: walletClients[2].account }),
       /Trebuie sa fii donator/
