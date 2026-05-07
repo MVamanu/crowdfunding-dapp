@@ -150,9 +150,7 @@ export default function App() {
         <Route path="/create-cross-milestone" element={<CreateCrossMilestone ethConnected={ethConnected} solAddress={solAddress} />} />
         <Route path="/cross-milestone/:id" element={<CrossMilestoneDetail {...commonProps} />} />
         <Route path="/v2" element={<AllCampaignsV2 />} />
-        <Route path="/v2/create/eth" element={<CreateCampaignV2 ethConnected={ethConnected} />} />
-        <Route path="/v2/create/sol" element={<CreateSolanaUsdcCampaign solWallet={solWallet} solConnected={solConnected} />} />
-        <Route path="/v2/create" element={<CreateCampaignV2 ethConnected={ethConnected} />} />
+        <Route path="/v2/create" element={<CreateCampaignV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/v2/campaign/:blockchain/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/create" element={
           <CreateCampaign ethContract={ethContract} ethConnected={ethConnected}

@@ -83,10 +83,10 @@ export default function AllCampaignsV2() {
       <section className="hero v2-hero">
         <div className="container">
           <div className="hero-content">
-            <div className="v2-badge">v2 — USDC Cross-Chain</div>
+            <div className="v2-badge">v2 â€” USDC Cross-Chain</div>
             <h1 className="hero-title">Crowdfunding Stabil,<br/>pe ETH si SOL.</h1>
             <div className="divider"></div>
-            <p className="hero-desc">Campanii in USDC pe Ethereum si Solana — valoare stabila, fara volatilitate crypto.</p>
+            <p className="hero-desc">Campanii in USDC pe Ethereum si Solana â€” valoare stabila, fara volatilitate crypto.</p>
           </div>
           <div className="hero-stats">
             <div className="hero-stat">
@@ -120,8 +120,7 @@ export default function AllCampaignsV2() {
                   <button key={v} className={filter === v ? "filter-tab active" : "filter-tab"} onClick={() => setFilter(v)}>{l}</button>
                 ))}
               </div>
-              <Link to="/v2/create/eth" className="btn-usdc" style={{whiteSpace:"nowrap"}}>+ ETH USDC</Link>
-              <Link to="/v2/create/sol" className="btn-usdc" style={{whiteSpace:"nowrap", background:"#9945ff"}}>+ SOL USDC</Link>
+              <Link to="/v2/create" className="btn-usdc" style={{whiteSpace:"nowrap"}}>+ Campanie Noua</Link>
             </div>
           </div>
 
@@ -129,13 +128,10 @@ export default function AllCampaignsV2() {
             <div className="loading-state"><div className="loading-spinner"></div><p>Se incarca...</p></div>
           ) : filtered.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">◇</div>
+              <div className="empty-icon">â—‡</div>
               <h3>Nicio campanie USDC</h3>
               <p>Fii primul care lanseaza o campanie in stablecoin.</p>
-              <div style={{display:"flex", gap:"12px", justifyContent:"center", marginTop:"16px"}}>
-                <Link to="/v2/create/eth" className="btn-usdc">+ ETH USDC</Link>
-                <Link to="/v2/create/sol" className="btn-usdc" style={{background:"#9945ff"}}>+ SOL USDC</Link>
-              </div>
+              <Link to="/v2/create" className="btn-usdc" style={{display:"inline-block", marginTop:"16px"}}>+ Campanie Noua</Link>
             </div>
           ) : (
             <div className="campaigns-grid">
