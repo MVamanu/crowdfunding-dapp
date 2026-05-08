@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useVersion } from "../context/VersionContext";
 import "./Navbar.css";
 
-export default function Navbar({ ethConnected, solConnected, ethAddress, solAddress, solWalletName, onConnectEth, onConnectSol, onConnectSolflare }) {
+export default function Navbar({ ethConnected, solConnected, ethAddress, solAddress, solWalletName, onConnectEth, onConnectSol, onConnectSolflare, onDisconnectEth, onDisconnectSol }) {
   const location = useLocation();
   const { version, switchVersion } = useVersion();
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
     if (v === "v2") navigate("/v2");
     else navigate("/");
   }
+
   const isActive = (paths) => paths.some(p => location.pathname === p || location.pathname.startsWith(p));
 
   return (
@@ -57,10 +58,19 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
         </div>
 
         <div className="navbar-wallets">
-          <button className={ethConnected ? "wallet-btn connected" : "wallet-btn"} onClick={onConnectEth}>
-            <span className="wallet-dot eth-dot"></span>
-            {ethConnected ? ethAddress.slice(0,6) + "..." + ethAddress.slice(-4) : "MetaMask"}
-          </button>
+          <div className="wallet-btn-group">
+            <button
+              className={ethConnected ? "wallet-btn connected" : "wallet-btn"}
+              onClick={!ethConnected ? onConnectEth : undefined}
+            >
+              <span className="wallet-dot eth-dot"></span>
+              {ethConnected ? ethAddress.slice(0,6) + "..." + ethAddress.slice(-4) : "MetaMask"}
+            </button>
+            {ethConnected && (
+              <button className="disconnect-btn" onClick={onDisconnectEth} title="Deconecteaza MetaMask">x</button>
+            )}
+          </div>
+
           {!solConnected ? (
             <div className="sol-wallet-group">
               <button className="wallet-btn" onClick={onConnectSol}>
@@ -73,10 +83,13 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
               </button>
             </div>
           ) : (
-            <button className="wallet-btn connected">
-              <span className="wallet-dot sol-dot"></span>
-              {solWalletName}: {solAddress.slice(0,4)}...{solAddress.slice(-4)}
-            </button>
+            <div className="wallet-btn-group">
+              <button className="wallet-btn connected">
+                <span className="wallet-dot sol-dot"></span>
+                {solWalletName}: {solAddress.slice(0,4)}...{solAddress.slice(-4)}
+              </button>
+              <button className="disconnect-btn" onClick={onDisconnectSol} title="Deconecteaza Solana">x</button>
+            </div>
           )}
         </div>
       </div>

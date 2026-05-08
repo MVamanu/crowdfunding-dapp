@@ -47,21 +47,30 @@ export default function App() {
   useEffect(() => {
     async function autoConnect() {
       await new Promise(r => setTimeout(r, 500));
-      if (window.solflare && window.solflare.isConnected) {
-        setSolAddress(window.solflare.publicKey.toString());
-        setSolWallet(window.solflare);
-        setSolWalletName("Solflare");
-        setSolConnected(true);
-      } else if (window.solana && window.solana.isConnected) {
-        setSolAddress(window.solana.publicKey.toString());
-        setSolWallet(window.solana);
-        setSolWalletName("Phantom");
-        setSolConnected(true);
+      // Solana auto-connect ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â nu deschide popup, doar verifica daca deja conectat
+      const solDisconnected = localStorage.getItem("sol_disconnected");
+      if (!solDisconnected) {
+        try {
+          const lastSolWallet = localStorage.getItem("sol_last_wallet");
+          if (lastSolWallet === "solflare" && window.solflare && window.solflare.publicKey) {
+            setSolAddress(window.solflare.publicKey.toString());
+            setSolWallet(window.solflare);
+            setSolWalletName("Solflare");
+            setSolConnected(true);
+          } else if (lastSolWallet === "phantom" && window.solana && window.solana.publicKey) {
+            setSolAddress(window.solana.publicKey.toString());
+            setSolWallet(window.solana);
+            setSolWalletName("Phantom");
+            setSolConnected(true);
+          }
+        } catch (e) { console.log("Sol auto-connect skip"); }
       }
+      // ETH auto-connect ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â foloseste eth_accounts (nu deschide popup)
       if (window.ethereum) {
         try {
+          const ethDisconnected = localStorage.getItem("eth_disconnected");
           const accounts = await window.ethereum.request({ method: "eth_accounts" });
-          if (accounts.length > 0) {
+          if (accounts.length > 0 && !ethDisconnected) {
             const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;
             const provider = new ethers.BrowserProvider(metamask);
             const signer = await provider.getSigner();
@@ -79,6 +88,7 @@ export default function App() {
 
   async function connectEth() {
     if (!window.ethereum) { alert("MetaMask not found!"); return; }
+    localStorage.removeItem("eth_disconnected");
     try {
       const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;
       const provider = new ethers.BrowserProvider(metamask);
@@ -95,6 +105,8 @@ export default function App() {
 
   async function connectSol() {
     if (!window.solana || !window.solana.isPhantom) { alert("Phantom not found!"); return; }
+    localStorage.removeItem("sol_disconnected");
+    localStorage.setItem("sol_last_wallet", "phantom");
     try {
       const resp = await window.solana.connect();
       setSolAddress(resp.publicKey.toString());
@@ -104,8 +116,28 @@ export default function App() {
     } catch (e) { console.error(e); }
   }
 
+  function disconnectEth() {
+    setEthConnected(false);
+    setEthAddress("");
+    setEthContract(null);
+    localStorage.setItem("eth_disconnected", "true");
+  }
+
+  function disconnectSol() {
+    setSolConnected(false);
+    setSolAddress("");
+    setSolWallet(null);
+    setSolWalletName("");
+    localStorage.setItem("sol_disconnected", "true");
+    localStorage.removeItem("sol_last_wallet");
+    if (window.solflare?.isConnected) window.solflare.disconnect();
+    if (window.solana?.isConnected) window.solana.disconnect();
+  }
+
   async function connectSolflare() {
     if (!window.solflare) { alert("Solflare not found!"); return; }
+    localStorage.removeItem("sol_disconnected");
+    localStorage.setItem("sol_last_wallet", "solflare");
     try {
       await window.solflare.connect();
       if (window.solflare.isConnected) {
@@ -131,6 +163,7 @@ export default function App() {
         solWalletName={solWalletName}
         onConnectEth={connectEth} onConnectSol={connectSol}
         onConnectSolflare={connectSolflare}
+        onDisconnectEth={disconnectEth} onDisconnectSol={disconnectSol}
       />
       <Routes>
         <Route path="/" element={<AllCampaigns solWallet={solWallet} />} />
@@ -151,7 +184,7 @@ export default function App() {
         <Route path="/cross-milestone/:id" element={<CrossMilestoneDetail {...commonProps} />} />
         <Route path="/v2" element={<AllCampaignsV2 />} />
         <Route path="/v2/create" element={<CreateCampaignV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} />} />
-        <Route path="/v2/campaign/:blockchain/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
+        <Route path="/v2/campaign/:blockchain/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/create" element={
           <CreateCampaign ethContract={ethContract} ethConnected={ethConnected}
             solConnected={solConnected} solWallet={solWallet} solWalletName={solWalletName} />

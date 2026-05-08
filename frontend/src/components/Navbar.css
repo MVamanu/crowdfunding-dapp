@@ -134,3 +134,21 @@
   color: white;
 }
 .version-label { font-size: 10px; opacity: 0.8; }
+
+.wallet-btn-group { display: flex; align-items: center; gap: 2px; }
+.disconnect-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.6);
+  border-radius: 6px;
+  padding: 4px 7px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+.disconnect-btn:hover {
+  background: rgba(220,50,50,0.3);
+  border-color: rgba(220,50,50,0.5);
+  color: white;
+}
