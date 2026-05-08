@@ -7,14 +7,17 @@ import ConnectWalletModal from "../../components/ConnectWalletModal";
 import "../CampaignDetail.css";
 import "./V2.css";
 
-const STABLE_V2_CONTRACT = "0xE3Ae8c1BF26e6bAfe7EDc5143Cd288B9DF4C1e40";
+const STABLE_V2_CONTRACT = "0x5Bf218455583dDC56213e3603D3d304D1B0dD006";
 const STABLE_V2_ABI = [
-  "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSDC,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains))",
+  "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSDC,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains,string solanaId))",
+  "function getCampaignBySolanaId(string) view returns (tuple(address owner,string title,string description,uint256 goalUSDC,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains,string solanaId), uint256)",
   "function donateLocal(uint256,uint256)",
+  "function donateForSolCampaign(string,uint256)",
   "function withdraw(uint256)",
   "function refund(uint256)",
   "function recordExternalDonation(uint256,uint256,string)",
   "function getDonation(uint256,address) view returns (uint256)",
+  "function getDonationForSol(string,address) view returns (uint256)",
   "function getTotalRaised(uint256) view returns (uint256)",
   "function getExternalDonations(uint256,string) view returns (uint256)",
 ];
@@ -43,7 +46,6 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
   const [showModal, setShowModal] = useState(false);
   const [userDonation, setUserDonation] = useState("0");
   const [step, setStep] = useState("approve");
-  const [solDonations, setSolDonations] = useState("0");
   const [donateChain, setDonateChain] = useState(blockchain || "eth");
 
   async function loadEthCampaign() {
@@ -52,7 +54,6 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
     const c = await contract.getCampaign(Number(id));
     const total = await contract.getTotalRaised(Number(id));
     const solExt = await contract.getExternalDonations(Number(id), "sol");
-    setSolDonations(solExt.toString());
     if (ethAddress) {
       const donation = await contract.getDonation(Number(id), ethAddress);
       setUserDonation(donation.toString());
@@ -64,6 +65,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
       id: Number(id), owner: c.owner, title: c.title, description: c.description,
       goalUSDC: c.goalUSDC, amountRaisedLocal: c.amountRaisedLocal,
       amountRaisedExternal: c.amountRaisedExternal, totalRaised: total,
+      solExternal: solExt,
       isActive: c.isActive, deadline: new Date(Number(c.deadline) * 1000),
       goalReached: c.goalReached, mainChain: c.mainChain,
       acceptedChains: c.acceptedChains, blockchain: "eth",
@@ -76,17 +78,53 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
     const prov = new anchor.AnchorProvider(connection, dummyWallet, { commitment: "confirmed" });
     anchor.setProvider(prov);
     const idl = await anchor.Program.fetchIdl(SOL_PROGRAM_ID, prov);
-    if (!idl) throw new Error("IDL nu a putut fi obtinut");
+    if (!idl) throw new Error("IDL not found");
     const program = new anchor.Program(idl, prov);
     const pubkey = new PublicKey(id);
     const c = await program.account.usdcCampaign.fetch(pubkey);
+
+    // Citim vault balance SOL
+    const [vaultPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), pubkey.toBuffer()], SOL_PROGRAM_ID
+    );
+    let vaultBalance = BigInt(c.amountRaised.toString());
+    try {
+      const tokenAccInfo = await connection.getTokenAccountBalance(vaultPDA);
+      vaultBalance = BigInt(tokenAccInfo.value.amount);
+    } catch(e) { console.log("Vault fallback"); }
+
+    // Citim donatiile ETH pentru aceasta campanie SOL din contractul ETH
+    let ethMirrorRaised = 0n;
+    let ethMirrorId = null;
+    try {
+      const ethProvider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
+      const ethContract = new ethers.Contract(STABLE_V2_CONTRACT, STABLE_V2_ABI, ethProvider);
+      const [mirrorCampaign, mirrorId] = await ethContract.getCampaignBySolanaId(id);
+      ethMirrorRaised = BigInt(mirrorCampaign.amountRaisedLocal.toString());
+      ethMirrorId = Number(mirrorId);
+
+      // Donatia user-ului ETH
+      if (ethAddress) {
+        const ethDonation = await ethContract.getDonationForSol(id, ethAddress);
+        setUserDonation(ethDonation.toString());
+      }
+    } catch(e) { console.log("No ETH mirror found"); }
+
     return {
       id, owner: c.owner.toString(), title: c.title, description: c.description,
-      goalUSDC: BigInt(c.goal.toString()), amountRaisedLocal: BigInt(c.amountRaised.toString()),
-      amountRaisedExternal: 0n, totalRaised: BigInt(c.amountRaised.toString()),
-      isActive: c.isActive, deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      goalReached: c.goalReached, mainChain: "sol",
-      acceptedChains: ["sol", "eth"], blockchain: "sol",
+      goalUSDC: BigInt(c.goal.toString()),
+      amountRaisedLocal: vaultBalance,
+      amountRaisedExternal: ethMirrorRaised,
+      totalRaised: vaultBalance + ethMirrorRaised,
+      isActive: c.isActive,
+      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      goalReached: c.goalReached,
+      mainChain: "sol",
+      acceptedChains: ["sol", "eth"],
+      blockchain: "sol",
+      vaultAddress: vaultPDA.toString(),
+      ethMirrorId,
+      solanaId: id,
     };
   }
 
@@ -95,7 +133,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
     try {
       const data = blockchain === "sol" ? await loadSolCampaign() : await loadEthCampaign();
       setCampaign(data);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("loadData error:", e); }
     setLoading(false);
   }
 
@@ -133,7 +171,13 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
       const signer = await getEthSigner();
       const contract = new ethers.Contract(STABLE_V2_CONTRACT, STABLE_V2_ABI, signer);
       const amountInUsdc = BigInt(Math.round(parseFloat(amount) * 1_000_000));
-      const tx = await contract.donateLocal(Number(id), amountInUsdc);
+      let tx;
+      // Daca campania e SOL main, folosim donateForSolCampaign
+      if (blockchain === "sol" && campaign?.solanaId) {
+        tx = await contract.donateForSolCampaign(campaign.solanaId, amountInUsdc);
+      } else {
+        tx = await contract.donateLocal(Number(id), amountInUsdc);
+      }
       await tx.wait();
       setSuccess("Donatie ETH USDC efectuata!");
       setAmount(""); setStep("approve");
@@ -144,33 +188,35 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
 
   async function handleDonateSol() {
     setError(""); setSuccess("");
-    if (!solConnected || !solWallet) { setShowModal(true); return; }
+    if (!solConnected && !solWallet) { setShowModal(true); return; }
     if (!amount || Number(amount) <= 0) { setError("Introdu o suma valida."); return; }
     setDonating(true);
     try {
       const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-      const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
+      const wallet = solWallet;
+      const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
       anchor.setProvider(provider);
       const idl = await anchor.Program.fetchIdl(SOL_PROGRAM_ID, provider);
       const program = new anchor.Program(idl, provider);
-      const campaignPubkey = new PublicKey(blockchain === "sol" ? id : campaign.solanaAddress);
+      const campaignPubkey = new PublicKey(id);
       const [vaultPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from("vault"), campaignPubkey.toBuffer()], SOL_PROGRAM_ID
       );
       const donorTokenAccount = await anchor.utils.token.associatedAddress({
-        mint: USDC_DEVNET, owner: solWallet.publicKey
+        mint: USDC_DEVNET, owner: wallet.publicKey
       });
+      const [donorUsdcPDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("donor_usdc"), campaignPubkey.toBuffer(), wallet.publicKey.toBuffer()],
+        SOL_PROGRAM_ID
+      );
       const amountBN = new anchor.BN(Math.round(parseFloat(amount) * 1_000_000));
       await program.methods.donateUsdc(amountBN)
         .accounts({
           usdcCampaign: campaignPubkey,
           vault: vaultPDA,
           donorTokenAccount,
-          donor: solWallet.publicKey,
-          donorUsdcAccount: (await PublicKey.findProgramAddressSync(
-            [Buffer.from("donor_usdc"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer()],
-            SOL_PROGRAM_ID
-          ))[0],
+          donor: wallet.publicKey,
+          donorUsdcAccount: donorUsdcPDA,
           tokenProgram: TOKEN_PROGRAM,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -196,7 +242,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
 
   async function handleRecordSol() {
     setError(""); setSuccess("");
-    if (!amount || Number(amount) <= 0) { setError("Introdu suma SOL USDC de inregistrat."); return; }
+    if (!amount || Number(amount) <= 0) { setError("Introdu suma SOL USDC."); return; }
     setRecording(true);
     try {
       const signer = await getEthSigner();
@@ -239,6 +285,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
   const isDonor = BigInt(userDonation) > 0n;
   const isExpired = campaign.deadline < Date.now();
   const chainColor = blockchain === "sol" ? "#9945FF" : "#2775CA";
+  const solWalletReady = solConnected || !!solWallet;
 
   return (
     <div className="detail-page">
@@ -246,7 +293,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
         onConnectEth={() => { onConnectEth(); setShowModal(false); }}
         onConnectSol={onConnectSol} onConnectSolflare={onConnectSolflare} />}
       <div className="container">
-        <button className="back-btn" onClick={() => navigate("/v2")}>← Campanii USDC</button>
+        <button className="back-btn" onClick={() => navigate("/v2")}>Inapoi la Campanii USDC</button>
         <div className="detail-layout">
           <div className="detail-main">
             <div className="detail-badges">
@@ -254,8 +301,8 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
               <span className="badge" style={{background:`${chainColor}20`, color:chainColor, border:`1px solid ${chainColor}40`}}>
                 {blockchain === "sol" ? "Solana" : "Ethereum"}
               </span>
-              <span className="badge" style={{background: campaign.mainChain === blockchain ? "rgba(39,117,202,0.1)" : "rgba(153,69,255,0.1)", color: campaign.mainChain === blockchain ? "#2775CA" : "#9945FF", border:"1px solid rgba(0,0,0,0.1)"}}>
-                {campaign.mainChain === blockchain ? "Main Chain" : "Secondary Chain"}
+              <span className="badge" style={{background:"rgba(39,117,202,0.1)", color:"#2775CA", border:"1px solid rgba(39,117,202,0.3)"}}>
+                Main Chain
               </span>
               <span className={`badge badge-${campaign.isActive ? "active" : "inactive"}`}>
                 {campaign.goalReached ? "Goal Atins" : campaign.isActive ? "Activa" : "Inchisa"}
@@ -266,27 +313,57 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
             <div className="divider"></div>
 
             <div className="detail-meta">
-              <div className="meta-item"><span className="meta-label">Owner</span><span className="meta-value mono">{campaign.owner?.slice(0,8)}...{campaign.owner?.slice(-6)}</span></div>
-              <div className="meta-item"><span className="meta-label">Main Chain</span><span className="meta-value" style={{color:chainColor, fontWeight:"600"}}>{campaign.mainChain?.toUpperCase()}</span></div>
-              <div className="meta-item"><span className="meta-label">Deadline</span><span className="meta-value">{campaign.deadline.toLocaleDateString("en-GB")} — {daysLeft} zile</span></div>
-              <div className="meta-item"><span className="meta-label">Accepta donatii din</span><span className="meta-value">{campaign.acceptedChains?.join(", ").toUpperCase()} USDC</span></div>
+              <div className="meta-item">
+                <span className="meta-label">Owner</span>
+                <span className="meta-value mono">{campaign.owner?.slice(0,8)}...{campaign.owner?.slice(-6)}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Main Chain</span>
+                <span className="meta-value" style={{color:chainColor, fontWeight:"600"}}>{campaign.mainChain?.toUpperCase()}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Deadline</span>
+                <span className="meta-value">{campaign.deadline.toLocaleDateString("en-GB")} - {daysLeft} zile</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Accepta donatii din</span>
+                <span className="meta-value">{campaign.acceptedChains?.join(", ").toUpperCase()} USDC</span>
+              </div>
             </div>
 
-            <div className="detail-description"><h3>Despre aceasta campanie</h3><p>{campaign.description}</p></div>
+            <div className="detail-description">
+              <h3>Despre aceasta campanie</h3>
+              <p>{campaign.description}</p>
+            </div>
 
             <div className="detail-progress card">
               <div className="progress-header">
-                <div><span className="progress-raised">${raisedUSDC} USDC</span><span className="progress-label"> strans din ${goalUSDC} USDC</span></div>
+                <div>
+                  <span className="progress-raised">${raisedUSDC} USDC</span>
+                  <span className="progress-label"> strans din ${goalUSDC} USDC</span>
+                </div>
                 <span className="progress-pct">{progress.toFixed(1)}%</span>
               </div>
               <div className="progress-bar v2-progress" style={{height:"10px", margin:"16px 0"}}>
                 <div className="progress-fill v2-fill" style={{width:`${progress}%`}}></div>
               </div>
               <div className="progress-stats">
-                <div className="pstat"><span className="pstat-value">${raisedLocal}</span><span className="pstat-label">ETH USDC</span></div>
-                <div className="pstat"><span className="pstat-value">${raisedExternal}</span><span className="pstat-label">SOL USDC</span></div>
-                <div className="pstat"><span className="pstat-value">${goalUSDC}</span><span className="pstat-label">Goal</span></div>
-                <div className="pstat"><span className="pstat-value">{daysLeft}</span><span className="pstat-label">Zile</span></div>
+                <div className="pstat">
+                  <span className="pstat-value">${raisedLocal}</span>
+                  <span className="pstat-label">{blockchain === "sol" ? "SOL USDC" : "ETH USDC"}</span>
+                </div>
+                <div className="pstat">
+                  <span className="pstat-value">${raisedExternal}</span>
+                  <span className="pstat-label">{blockchain === "sol" ? "ETH USDC" : "SOL USDC"}</span>
+                </div>
+                <div className="pstat">
+                  <span className="pstat-value">${goalUSDC}</span>
+                  <span className="pstat-label">Goal</span>
+                </div>
+                <div className="pstat">
+                  <span className="pstat-value">{daysLeft}</span>
+                  <span className="pstat-label">Zile</span>
+                </div>
               </div>
             </div>
           </div>
@@ -346,9 +423,10 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
                     </button>
                   )
                 ) : (
-                  <button className="btn-usdc donate-btn" style={{width:"100%", justifyContent:"center", background:"#9945FF"}}
+                  <button className="btn-usdc donate-btn"
+                    style={{width:"100%", justifyContent:"center", background:"#9945FF"}}
                     onClick={handleDonateSol} disabled={donating}>
-                    {donating ? "Se proceseaza..." : solConnected ? "Doneaza SOL USDC" : "Conecteaza Phantom/Solflare"}
+                    {donating ? "Se proceseaza..." : solWalletReady ? "Doneaza SOL USDC" : "Conecteaza Phantom/Solflare"}
                   </button>
                 )}
               </div>
@@ -365,7 +443,8 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
                     placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} />
                   <span className="donate-currency">USDC</span>
                 </div>
-                <button className="btn-usdc" style={{width:"100%", justifyContent:"center", marginTop:"8px", background:"#9945FF"}}
+                <button className="btn-usdc"
+                  style={{width:"100%", justifyContent:"center", marginTop:"8px", background:"#9945FF"}}
                   onClick={handleRecordSol} disabled={recording}>
                   {recording ? "Se proceseaza..." : "Inregistreaza SOL USDC"}
                 </button>
@@ -374,7 +453,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
 
             {isOwner && campaign.goalReached && campaign.isActive && blockchain === "eth" && (
               <div className="withdraw-card card">
-                <h3 className="withdraw-title">Goal atins! 🎉</h3>
+                <h3 className="withdraw-title">Goal atins! ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Â°</h3>
                 <p>Retrage ${raisedLocal} USDC din Ethereum.</p>
                 <button className="btn-usdc" style={{width:"100%", justifyContent:"center"}} onClick={handleWithdraw}>
                   Retrage ETH USDC
@@ -386,29 +465,46 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
               <div className="withdraw-card card">
                 <h3 className="withdraw-title">Campanie expirata</h3>
                 <p>Recupereaza ${(Number(userDonation) / 1_000_000).toFixed(2)} USDC.</p>
-                <button className="btn-usdc" style={{width:"100%", justifyContent:"center", background:"#e53e3e"}}
+                <button className="btn-usdc"
+                  style={{width:"100%", justifyContent:"center", background:"#e53e3e"}}
                   onClick={handleRefund}>Recupereaza USDC</button>
               </div>
             )}
 
             <div className="contract-card card">
               <h4 className="contract-title">Contract Info</h4>
-              <div className="contract-item"><span className="contract-label">Token</span><span className="contract-value">USDC (6 decimale)</span></div>
-              <div className="contract-item"><span className="contract-label">Main Chain</span><span className="contract-value" style={{color:chainColor}}>{campaign.mainChain?.toUpperCase()}</span></div>
-              <div className="contract-item"><span className="contract-label">Accepta</span><span className="contract-value">{campaign.acceptedChains?.join(" + ").toUpperCase()}</span></div>
+              <div className="contract-item">
+                <span className="contract-label">Token</span>
+                <span className="contract-value">USDC (6 decimale)</span>
+              </div>
+              <div className="contract-item">
+                <span className="contract-label">Main Chain</span>
+                <span className="contract-value" style={{color:chainColor}}>{campaign.mainChain?.toUpperCase()}</span>
+              </div>
+              <div className="contract-item">
+                <span className="contract-label">Accepta</span>
+                <span className="contract-value">{campaign.acceptedChains?.join(" + ").toUpperCase()}</span>
+              </div>
               {blockchain === "eth" && (
                 <div className="contract-item">
                   <span className="contract-label">Etherscan</span>
-                  <a href={`https://sepolia.etherscan.io/address/${STABLE_V2_CONTRACT}`} target="_blank" rel="noreferrer" style={{color:"#2775CA", fontSize:"11px"}}>View Contract</a>
+                  <a href={`https://sepolia.etherscan.io/address/${STABLE_V2_CONTRACT}`}
+                    target="_blank" rel="noreferrer" style={{color:"#2775CA", fontSize:"11px"}}>View Contract</a>
                 </div>
               )}
               {blockchain === "sol" && (
                 <div className="contract-item">
                   <span className="contract-label">Explorer</span>
-                  <a href={`https://explorer.solana.com/address/${id}?cluster=devnet`} target="_blank" rel="noreferrer" style={{color:"#9945FF", fontSize:"11px"}}>View on Solana</a>
+                  <a href={`https://explorer.solana.com/address/${id}?cluster=devnet`}
+                    target="_blank" rel="noreferrer" style={{color:"#9945FF", fontSize:"11px"}}>View on Solana</a>
                 </div>
               )}
-              {isDonor && <div className="contract-item"><span className="contract-label">Donatia ta</span><span className="contract-value">${(Number(userDonation) / 1_000_000).toFixed(2)} USDC</span></div>}
+              {isDonor && (
+                <div className="contract-item">
+                  <span className="contract-label">Donatia ta</span>
+                  <span className="contract-value">${(Number(userDonation) / 1_000_000).toFixed(2)} USDC</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

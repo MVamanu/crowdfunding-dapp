@@ -6,7 +6,7 @@ import * as anchor from "@coral-xyz/anchor";
 import "../AllCampaigns.css";
 import "./V2.css";
 
-const STABLE_V2_CONTRACT = "0xE3Ae8c1BF26e6bAfe7EDc5143Cd288B9DF4C1e40";
+const STABLE_V2_CONTRACT = "0x5Bf218455583dDC56213e3603D3d304D1B0dD006";
 const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
 const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
 
@@ -68,12 +68,21 @@ export default function AllCampaignsV2() {
           const accounts = await program.account.usdcCampaign.all();
           for (const acc of accounts) {
             const d = acc.account;
+            // Citim vault balance real
+            let vaultBalance = Number(d.amountRaised);
+            try {
+              const [vaultPDA] = PublicKey.findProgramAddressSync(
+                [Buffer.from("vault"), acc.publicKey.toBuffer()], SOL_PROGRAM_ID
+              );
+              const tokenAccInfo = await connection.getTokenAccountBalance(vaultPDA);
+              vaultBalance = Number(tokenAccInfo.value.amount);
+            } catch(e) {}
             all.push({
               id: `sol-${acc.publicKey.toString()}`,
               title: d.title,
               description: d.description,
               goal: Number(d.goal),
-              amountRaised: Number(d.amountRaised),
+              amountRaised: vaultBalance,
               isActive: d.isActive,
               owner: d.owner.toString(),
               deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

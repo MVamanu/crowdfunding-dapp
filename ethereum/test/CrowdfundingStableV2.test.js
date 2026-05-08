@@ -16,7 +16,7 @@ describe("CrowdfundingStableV2", async function () {
     const { contract } = await deployAll();
     await contract.write.createCampaign([
       "Test ETH Main", "Descriere", 100_000_000n, 30n,
-      "eth", ["eth", "sol"], ["", "SolanaAddr"]
+      "eth", ["eth", "sol"], ""
     ]);
     const campaign = await contract.read.getCampaign([0n]);
     assert.equal(campaign.title, "Test ETH Main");
@@ -26,21 +26,25 @@ describe("CrowdfundingStableV2", async function () {
     assert.equal(campaign.goalReached, false);
   });
 
-  it("creeaza campanie cu main chain SOL", async function () {
+  it("creeaza campanie cu main chain SOL si solanaId", async function () {
     const { contract } = await deployAll();
+    const solanaId = "5bgwcbaeK9LCjpiPCvMTdvVxvLGTUKrhBH6ZtBhhyq1C";
     await contract.write.createCampaign([
       "Test SOL Main", "Descriere", 100_000_000n, 30n,
-      "sol", ["eth", "sol"], ["", "SolanaAddr"]
+      "sol", ["eth", "sol"], solanaId
     ]);
     const campaign = await contract.read.getCampaign([0n]);
     assert.equal(campaign.mainChain, "sol");
+    assert.equal(campaign.solanaId, solanaId);
+    const exists = await contract.read.solanaIdExists([solanaId]);
+    assert.equal(exists, true);
   });
 
-  it("accepta donatii USDC locale", async function () {
+  it("accepta donatii USDC locale ETH", async function () {
     const { usdc, contract } = await deployAll();
     await contract.write.createCampaign([
       "Test", "Desc", 100_000_000n, 30n,
-      "eth", ["eth", "sol"], ["", ""]
+      "eth", ["eth", "sol"], ""
     ]);
     await usdc.write.mint([walletClients[1].account.address, 200_000_000n]);
     await usdc.write.approve([contract.address, 50_000_000n], {
@@ -51,27 +55,56 @@ describe("CrowdfundingStableV2", async function () {
     });
     const campaign = await contract.read.getCampaign([0n]);
     assert.equal(campaign.amountRaisedLocal, 50_000_000n);
-    assert.equal(campaign.amountRaisedExternal, 0n);
+  });
+
+  it("accepta donatii ETH pentru campanie SOL prin solanaId", async function () {
+    const { usdc, contract } = await deployAll();
+    const solanaId = "5bgwcbaeK9LCjpiPCvMTdvVxvLGTUKrhBH6ZtBhhyq1C";
+    await contract.write.createCampaign([
+      "Test SOL", "Desc", 100_000_000n, 30n,
+      "sol", ["eth", "sol"], solanaId
+    ]);
+    await usdc.write.mint([walletClients[1].account.address, 200_000_000n]);
+    await usdc.write.approve([contract.address, 50_000_000n], {
+      account: walletClients[1].account
+    });
+    await contract.write.donateForSolCampaign([solanaId, 50_000_000n], {
+      account: walletClients[1].account
+    });
+    const campaign = await contract.read.getCampaign([0n]);
+    assert.equal(campaign.amountRaisedLocal, 50_000_000n);
+    const donation = await contract.read.getDonationForSol([solanaId, walletClients[1].account.address]);
+    assert.equal(donation, 50_000_000n);
+  });
+
+  it("getCampaignBySolanaId returneaza campania corecta", async function () {
+    const { contract } = await deployAll();
+    const solanaId = "5bgwcbaeK9LCjpiPCvMTdvVxvLGTUKrhBH6ZtBhhyq1C";
+    await contract.write.createCampaign([
+      "Test SOL", "Desc", 100_000_000n, 30n,
+      "sol", ["eth", "sol"], solanaId
+    ]);
+    const [campaign, id] = await contract.read.getCampaignBySolanaId([solanaId]);
+    assert.equal(campaign.title, "Test SOL");
+    assert.equal(id, 0n);
   });
 
   it("inregistreaza donatie externa SOL", async function () {
     const { contract } = await deployAll();
     await contract.write.createCampaign([
       "Test", "Desc", 100_000_000n, 30n,
-      "eth", ["eth", "sol"], ["", "SolAddr"]
+      "eth", ["eth", "sol"], ""
     ]);
     await contract.write.recordExternalDonation([0n, 30_000_000n, "sol"]);
     const campaign = await contract.read.getCampaign([0n]);
     assert.equal(campaign.amountRaisedExternal, 30_000_000n);
-    const solDonations = await contract.read.getExternalDonations([0n, "sol"]);
-    assert.equal(solDonations, 30_000_000n);
   });
 
   it("goalReached cand total local + extern >= goal", async function () {
     const { usdc, contract } = await deployAll();
     await contract.write.createCampaign([
       "Test", "Desc", 100_000_000n, 30n,
-      "eth", ["eth", "sol"], ["", ""]
+      "eth", ["eth", "sol"], ""
     ]);
     await usdc.write.mint([walletClients[1].account.address, 200_000_000n]);
     await usdc.write.approve([contract.address, 60_000_000n], {
@@ -91,7 +124,7 @@ describe("CrowdfundingStableV2", async function () {
     const { usdc, contract } = await deployAll();
     await contract.write.createCampaign([
       "Test", "Desc", 100_000_000n, 30n,
-      "eth", ["eth"], [""]
+      "eth", ["eth"], ""
     ]);
     await usdc.write.mint([walletClients[1].account.address, 200_000_000n]);
     await usdc.write.approve([contract.address, 100_000_000n], {
@@ -106,32 +139,17 @@ describe("CrowdfundingStableV2", async function () {
     assert.equal(balAfter - balBefore, 100_000_000n);
   });
 
-  it("esueaza recordExternalDonation daca non-owner", async function () {
-    const { contract } = await deployAll();
-    await contract.write.createCampaign([
-      "Test", "Desc", 100_000_000n, 30n,
-      "eth", ["eth", "sol"], ["", ""]
-    ]);
-    await assert.rejects(
-      contract.write.recordExternalDonation([0n, 30_000_000n, "sol"], {
-        account: walletClients[1].account
-      }),
-      /Nu esti proprietarul/
-    );
-  });
-
-  it("esueaza donateLocal fara approve", async function () {
+  it("esueaza donateForSolCampaign daca solanaId nu exista", async function () {
     const { usdc, contract } = await deployAll();
-    await contract.write.createCampaign([
-      "Test", "Desc", 100_000_000n, 30n,
-      "eth", ["eth"], [""]
-    ]);
     await usdc.write.mint([walletClients[1].account.address, 200_000_000n]);
+    await usdc.write.approve([contract.address, 50_000_000n], {
+      account: walletClients[1].account
+    });
     await assert.rejects(
-      contract.write.donateLocal([0n, 50_000_000n], {
+      contract.write.donateForSolCampaign(["invalidSolanaId", 50_000_000n], {
         account: walletClients[1].account
       }),
-      /Aproba USDC mai intai/
+      /Campania Solana nu exista pe ETH/
     );
   });
 });

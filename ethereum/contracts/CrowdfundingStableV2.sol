@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title CrowdfundingStableV2 - Campanie USDC cross-chain
+/// @title CrowdfundingStableV2 - Campanie USDC cross-chain cu suport ETH mirror pentru campanii SOL
 /// @author Marian Dumitru Vamanu
-/// @notice Accepta donatii USDC pe Ethereum si inregistreaza donatii externe (SOL, viitoare chain-uri)
-/// @dev Poate fi folosit ca main chain SAU ca secondary chain
+/// @notice Accepta donatii USDC local si inregistreaza donatii externe din alte chain-uri
+/// @dev Suporta campanii cu main chain ETH sau SOL
 interface IERC20 {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
     function transfer(address to, uint256 amount) external returns (bool);
@@ -15,12 +15,6 @@ interface IERC20 {
 contract CrowdfundingStableV2 {
 
     IERC20 public immutable usdc;
-
-    struct ExternalChain {
-        string chainName;
-        string contractAddress;
-        bool active;
-    }
 
     struct Campaign {
         address owner;
@@ -34,15 +28,18 @@ contract CrowdfundingStableV2 {
         bool goalReached;
         string mainChain;
         string[] acceptedChains;
+        string solanaId;
     }
 
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => mapping(address => uint256)) public donations;
     mapping(uint256 => mapping(string => uint256)) public externalDonations;
-    mapping(uint256 => ExternalChain[]) public campaignChains;
+    // Mapping solanaId => campaignId pentru campanii cu main=SOL
+    mapping(string => uint256) public solanaToCampaign;
+    mapping(string => bool) public solanaIdExists;
     uint256 public campaignCount;
 
-    event CampaignCreated(uint256 indexed id, address indexed owner, string title, uint256 goalUSDC, string mainChain);
+    event CampaignCreated(uint256 indexed id, address indexed owner, string title, uint256 goalUSDC, string mainChain, string solanaId);
     event DonationReceived(uint256 indexed id, address indexed donor, uint256 amount, string chain);
     event ExternalDonationRecorded(uint256 indexed id, uint256 amount, string fromChain);
     event FundsWithdrawn(uint256 indexed id, address indexed owner, uint256 amount);
@@ -69,8 +66,8 @@ contract CrowdfundingStableV2 {
     /// @param _goalUSDC Goalul in USDC (6 zecimale)
     /// @param _durationDays Durata in zile
     /// @param _mainChain Blockchain-ul principal ("eth" sau "sol")
-    /// @param _acceptedChains Chain-urile care accepta donatii (ex: ["eth", "sol"])
-    /// @param _externalAddresses Adresele contractelor/programelor externe
+    /// @param _acceptedChains Chain-urile acceptate
+    /// @param _solanaId ID-ul contului Solana (pubkey) pentru campanii SOL main
     function createCampaign(
         string memory _title,
         string memory _description,
@@ -78,7 +75,7 @@ contract CrowdfundingStableV2 {
         uint256 _durationDays,
         string memory _mainChain,
         string[] memory _acceptedChains,
-        string[] memory _externalAddresses
+        string memory _solanaId
     ) external returns (uint256) {
         require(_goalUSDC > 0, "Goalul trebuie sa fie pozitiv");
         require(_durationDays > 0, "Durata trebuie sa fie pozitiva");
@@ -96,23 +93,21 @@ contract CrowdfundingStableV2 {
             deadline: block.timestamp + (_durationDays * 1 days),
             goalReached: false,
             mainChain: _mainChain,
-            acceptedChains: _acceptedChains
+            acceptedChains: _acceptedChains,
+            solanaId: _solanaId
         });
 
-        for (uint256 i = 0; i < _acceptedChains.length; i++) {
-            string memory addr = i < _externalAddresses.length ? _externalAddresses[i] : "";
-            campaignChains[id].push(ExternalChain({
-                chainName: _acceptedChains[i],
-                contractAddress: addr,
-                active: true
-            }));
+        // Daca main chain e SOL, inregistram mapping-ul solanaId => campaignId
+        if (bytes(_solanaId).length > 0) {
+            solanaToCampaign[_solanaId] = id;
+            solanaIdExists[_solanaId] = true;
         }
 
-        emit CampaignCreated(id, msg.sender, _title, _goalUSDC, _mainChain);
+        emit CampaignCreated(id, msg.sender, _title, _goalUSDC, _mainChain, _solanaId);
         return id;
     }
 
-    /// @notice Doneaza USDC local (pe Ethereum)
+    /// @notice Doneaza USDC local pe Ethereum
     /// @dev Necesita approve() inainte
     function donateLocal(uint256 _id, uint256 _amount) external campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
@@ -132,11 +127,31 @@ contract CrowdfundingStableV2 {
         emit DonationReceived(_id, msg.sender, _amount, "eth");
     }
 
-    /// @notice Inregistreaza o donatie externa (SOL, Polygon, etc.)
-    /// @dev Apelat de owner dupa confirmarea donatiei pe chain-ul extern
-    /// @param _id ID-ul campaniei
+    /// @notice Doneaza USDC pentru o campanie SOL identificata prin solanaId
+    /// @dev Permite donatorilor ETH sa doneze la campanii cu main chain SOL
+    /// @param _solanaId Pubkey-ul contului Solana al campaniei
     /// @param _amount Suma in USDC (6 zecimale)
-    /// @param _fromChain Numele chain-ului sursa ("sol", "polygon", etc.)
+    function donateForSolCampaign(string memory _solanaId, uint256 _amount) external {
+        require(solanaIdExists[_solanaId], "Campania Solana nu exista pe ETH");
+        uint256 _id = solanaToCampaign[_solanaId];
+        Campaign storage campaign = campaigns[_id];
+        require(campaign.isActive, "Campania nu este activa");
+        require(block.timestamp < campaign.deadline, "Campania a expirat");
+        require(_amount > 0, "Suma invalida");
+        require(
+            usdc.allowance(msg.sender, address(this)) >= _amount,
+            "Aproba USDC mai intai"
+        );
+
+        donations[_id][msg.sender] += _amount;
+        campaign.amountRaisedLocal += _amount;
+        _checkGoal(campaign);
+
+        require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer esuat");
+        emit DonationReceived(_id, msg.sender, _amount, "eth");
+    }
+
+    /// @notice Inregistreaza o donatie externa (SOL, etc.)
     function recordExternalDonation(
         uint256 _id,
         uint256 _amount,
@@ -167,7 +182,7 @@ contract CrowdfundingStableV2 {
         emit FundsWithdrawn(_id, msg.sender, amount);
     }
 
-    /// @notice Refund USDC local daca campania a expirat
+    /// @notice Refund USDC daca campania a expirat
     function refund(uint256 _id) external campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
         require(
@@ -191,6 +206,13 @@ contract CrowdfundingStableV2 {
         }
     }
 
+    /// @notice Returneaza campania dupa solanaId
+    function getCampaignBySolanaId(string memory _solanaId) external view returns (Campaign memory, uint256) {
+        require(solanaIdExists[_solanaId], "Campania Solana nu exista");
+        uint256 id = solanaToCampaign[_solanaId];
+        return (campaigns[id], id);
+    }
+
     function getCampaign(uint256 _id) external view campaignExists(_id) returns (Campaign memory) {
         return campaigns[_id];
     }
@@ -205,5 +227,11 @@ contract CrowdfundingStableV2 {
 
     function getDonation(uint256 _id, address _donor) external view returns (uint256) {
         return donations[_id][_donor];
+    }
+
+    function getDonationForSol(string memory _solanaId, address _donor) external view returns (uint256) {
+        require(solanaIdExists[_solanaId], "Campania Solana nu exista");
+        uint256 id = solanaToCampaign[_solanaId];
+        return donations[id][_donor];
     }
 }
