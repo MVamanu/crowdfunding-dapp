@@ -25,10 +25,10 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [form, setForm] = useState({ title: "", description: "", goal: "", duration: "" });
   const [mainChain, setMainChain] = useState("eth");
   const [acceptedChains, setAcceptedChains] = useState(["eth", "sol"]);
-  const [step, setStep] = useState(1);
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -44,7 +44,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
 
   const isConnectedForMain = mainChain === "eth" ? ethConnected : (solConnected || !!solWallet);
 
-  async function createOnEth(goalInUsdc, solanaId = "") {
+  async function createOnEth(goalInUsdc, solanaId) {
     const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;
     const provider = new ethers.BrowserProvider(metamask);
     const signer = await provider.getSigner();
@@ -52,7 +52,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
     const tx = await contract.createCampaign(
       form.title, form.description, goalInUsdc,
       BigInt(form.duration), mainChain,
-      acceptedChains, solanaId
+      acceptedChains, solanaId || ""
     );
     await tx.wait();
   }
@@ -82,10 +82,12 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
       })
       .signers([campaignKeypair])
       .rpc();
+    return campaignKeypair.publicKey.toString();
   }
 
   const handleSubmit = async () => {
     setError("");
+    setStatus("");
     if (!form.title || !form.description || !form.goal || !form.duration) {
       setError("Toate campurile sunt obligatorii."); return;
     }
@@ -99,17 +101,31 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
       const goalInUsdc = BigInt(Math.round(parseFloat(form.goal) * 1_000_000));
 
       if (mainChain === "eth") {
-        // ETH main â€” solanaId gol
+        setStatus("Se creeaza campania pe Ethereum...");
         await createOnEth(goalInUsdc, "");
+        setStatus("Campanie creata cu succes!");
       } else {
-        // SOL main â€” cream mai intai pe Solana, obtinem pubkey, apoi cream mirror pe ETH
+        // Pas 1: Cream pe Solana
+        setStatus("Pas 1/2: Se creeaza campania pe Solana...");
         const solanaCampaignId = await createOnSol(goalInUsdc);
-        if (solanaCampaignId) {
-          await createOnEth(goalInUsdc, solanaCampaignId);
+        console.log("Solana campaign created:", solanaCampaignId);
+
+        // Pas 2: Cream mirror pe ETH daca ETH e in accepted chains
+        if (acceptedChains.includes("eth") && ethConnected) {
+          setStatus("Pas 2/2: Se creeaza mirror-ul pe Ethereum...");
+          try {
+            await createOnEth(goalInUsdc, solanaCampaignId);
+            setStatus("Campanie cross-chain creata cu succes!");
+          } catch (ethErr) {
+            console.error("ETH mirror failed:", ethErr);
+            setStatus("Campanie SOL creata! Mirror ETH esuat - poti dona doar SOL USDC.");
+          }
+        } else {
+          setStatus("Campanie SOL creata cu succes!");
         }
       }
 
-      navigate("/v2");
+      setTimeout(() => navigate("/v2"), 1500);
     } catch (e) {
       setError(e.reason || e.message || "Tranzactie esuata.");
     }
@@ -120,7 +136,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
     <div className="create-page">
       <div className="container">
         <div className="create-header">
-          <div className="v2-badge">v2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â USDC Cross-Chain</div>
+          <div className="v2-badge">v2 - USDC Cross-Chain</div>
           <h1 className="create-title">Creeaza Campanie USDC</h1>
           <div className="divider"></div>
           <p className="create-desc">Goal in USDC, donatii acceptate din multiple blockchain-uri. Tu alegi unde e principala logica.</p>
@@ -130,14 +146,14 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
           <div className="create-form card">
 
             <div className="usdc-note">
-              <span>ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¡</span>
+              <span>💡</span>
               <span>1 USDC = $1 USD intotdeauna, pe orice blockchain.</span>
             </div>
 
             <div className="form-section">
               <h3 className="form-section-title">1. Alege Blockchain-ul Principal</h3>
               <p style={{fontSize:"13px", color:"var(--text-muted)", marginBottom:"12px"}}>
-                Pe acest blockchain se va gestiona logica campaniei (retragere fonduri, milestone-uri viitoare).
+                Pe acest blockchain se va gestiona logica campaniei.
               </p>
               <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px"}}>
                 {CHAINS.map(chain => (
@@ -156,7 +172,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
                     </div>
                     <div style={{fontSize:"12px", color:"var(--text-muted)", marginTop:"4px"}}>{chain.desc}</div>
                     {mainChain === chain.id && (
-                      <div style={{fontSize:"11px", color:chain.color, marginTop:"6px", fontWeight:"600"}}>ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Principal</div>
+                      <div style={{fontSize:"11px", color:chain.color, marginTop:"6px", fontWeight:"600"}}>Principal</div>
                     )}
                   </button>
                 ))}
@@ -165,9 +181,6 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
 
             <div className="form-section">
               <h3 className="form-section-title">2. Chain-uri care accepta donatii</h3>
-              <p style={{fontSize:"13px", color:"var(--text-muted)", marginBottom:"12px"}}>
-                Donatorii pot contribui din oricare dintre aceste blockchain-uri.
-              </p>
               <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px"}}>
                 {CHAINS.map(chain => (
                   <button
@@ -186,7 +199,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
                       display:"flex", alignItems:"center", justifyContent:"center",
                       color:"white", fontSize:"12px", fontWeight:"700"
                     }}>
-                      {acceptedChains.includes(chain.id) ? "ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“" : ""}
+                      {acceptedChains.includes(chain.id) ? "✓" : ""}
                     </span>
                     <div>
                       <div style={{fontWeight:"600", fontSize:"14px", color:"var(--navy)"}}>{chain.name}</div>
@@ -225,24 +238,35 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
             <div className="form-section">
               <h3 className="form-section-title">4. Wallet-uri conectate</h3>
               <div style={{display:"flex", flexDirection:"column", gap:"8px"}}>
-                <div style={{display:"flex", alignItems:"center", gap:"12px", padding:"10px 14px", borderRadius:"var(--radius-lg)", border:`1.5px solid ${ethConnected ? "#627EEA" : "var(--border)"}`, background:"var(--cream)"}}>
+                <div style={{
+                  display:"flex", alignItems:"center", gap:"12px", padding:"10px 14px",
+                  borderRadius:"var(--radius-lg)",
+                  border:`1.5px solid ${ethConnected ? "#627EEA" : "var(--border)"}`,
+                  background:"var(--cream)"
+                }}>
                   <span style={{width:"8px", height:"8px", borderRadius:"50%", background: ethConnected ? "#627EEA" : "var(--border)", flexShrink:0}}></span>
                   <span style={{fontSize:"13px", color:"var(--navy)", fontWeight:"600"}}>
                     MetaMask {ethConnected ? "conectat" : "neconectat"}
-                    {mainChain === "eth" && <span style={{color:"#627EEA", marginLeft:"6px", fontSize:"11px"}}>ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Principal</span>}
+                    {mainChain === "eth" && <span style={{color:"#627EEA", marginLeft:"6px", fontSize:"11px"}}>Principal</span>}
                   </span>
                 </div>
-                <div style={{display:"flex", alignItems:"center", gap:"12px", padding:"10px 14px", borderRadius:"var(--radius-lg)", border:`1.5px solid ${(solConnected || !!solWallet) ? "#9945FF" : "var(--border)"}`, background:"var(--cream)"}}>
+                <div style={{
+                  display:"flex", alignItems:"center", gap:"12px", padding:"10px 14px",
+                  borderRadius:"var(--radius-lg)",
+                  border:`1.5px solid ${(solConnected || !!solWallet) ? "#9945FF" : "var(--border)"}`,
+                  background:"var(--cream)"
+                }}>
                   <span style={{width:"8px", height:"8px", borderRadius:"50%", background: (solConnected || !!solWallet) ? "#9945FF" : "var(--border)", flexShrink:0}}></span>
                   <span style={{fontSize:"13px", color:"var(--navy)", fontWeight:"600"}}>
                     Solana {(solConnected || !!solWallet) ? "conectat" : "neconectat"}
-                    {mainChain === "sol" && <span style={{color:"#9945FF", marginLeft:"6px", fontSize:"11px"}}>ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Principal</span>}
+                    {mainChain === "sol" && <span style={{color:"#9945FF", marginLeft:"6px", fontSize:"11px"}}>Principal</span>}
                   </span>
                 </div>
               </div>
             </div>
 
             {error && <div className="form-error">{error}</div>}
+            {status && <div className="form-success">{status}</div>}
 
             <button
               className="btn-usdc submit-btn"
@@ -253,7 +277,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
               onClick={handleSubmit}
               disabled={loading || !isConnectedForMain}
             >
-              {loading ? "Se proceseaza..." : `Lanseaza pe ${mainChain === "eth" ? "Ethereum" : "Solana"}`}
+              {loading ? status || "Se proceseaza..." : `Lanseaza pe ${mainChain === "eth" ? "Ethereum" : "Solana"}`}
             </button>
           </div>
 
@@ -262,11 +286,11 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
               <h4 className="info-title">Cum functioneaza?</h4>
               <div className="info-steps">
                 {[
-                  ["01", "Alegi main chain", "Logica campaniei si retragerea fondurilor se fac pe acest blockchain."],
-                  ["02", "Accepti donatii", "Din ETH, SOL sau ambele ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â tu decizi."],
+                  ["01", "Alegi main chain", "Logica campaniei se gestioneaza pe acest blockchain."],
+                  ["02", "Accepti donatii", "Din ETH, SOL sau ambele."],
                   ["03", "Donatorii contribuie", "Din orice chain acceptat, in USDC."],
                   ["04", "Progress unificat", "Totalul in USDC e agregat din toate chain-urile."],
-                  ["05", "Retragi fondurile", "De pe fiecare chain separat, dupa atingerea goalului."],
+                  ["05", "Retragi fondurile", "De pe fiecare chain separat, dupa goal."],
                 ].map(([n, t, d]) => (
                   <div key={n} className="info-step">
                     <span className="step-num" style={{
