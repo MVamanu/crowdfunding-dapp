@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title CrowdfundingStableV2 - Campanie USDC cross-chain cu suport ETH mirror pentru campanii SOL
+/// @title CrowdfundingStableV2 - Campanie USDC cross-chain cu swap ETH->USDC via Uniswap V2
 /// @author Marian Dumitru Vamanu
-/// @notice Accepta donatii USDC local si inregistreaza donatii externe din alte chain-uri
-/// @dev Suporta campanii cu main chain ETH sau SOL
+/// @notice Accepta donatii in ETH (swap automat la USDC) sau direct in USDC
+/// @dev Integreaza Uniswap V2 Router pentru conversie ETH->USDC on-chain
+
 interface IERC20 {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
     function transfer(address to, uint256 amount) external returns (bool);
@@ -12,9 +13,28 @@ interface IERC20 {
     function allowance(address owner, address spender) external view returns (uint256);
 }
 
+/// @notice Interfata Uniswap V2 Router pentru swap ETH->USDC
+interface IUniswapV2Router {
+    function swapExactETHForTokens(
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external payable returns (uint[] memory amounts);
+
+    function getAmountsOut(
+        uint amountIn,
+        address[] calldata path
+    ) external view returns (uint[] memory amounts);
+
+    function WETH() external pure returns (address);
+}
+
 contract CrowdfundingStableV2 {
 
     IERC20 public immutable usdc;
+    IUniswapV2Router public immutable uniswapRouter;
+    address public immutable weth;
 
     struct Campaign {
         address owner;
@@ -34,13 +54,13 @@ contract CrowdfundingStableV2 {
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => mapping(address => uint256)) public donations;
     mapping(uint256 => mapping(string => uint256)) public externalDonations;
-    // Mapping solanaId => campaignId pentru campanii cu main=SOL
     mapping(string => uint256) public solanaToCampaign;
     mapping(string => bool) public solanaIdExists;
     uint256 public campaignCount;
 
     event CampaignCreated(uint256 indexed id, address indexed owner, string title, uint256 goalUSDC, string mainChain, string solanaId);
     event DonationReceived(uint256 indexed id, address indexed donor, uint256 amount, string chain);
+    event DonationETHSwapped(uint256 indexed id, address indexed donor, uint256 ethAmount, uint256 usdcReceived);
     event ExternalDonationRecorded(uint256 indexed id, uint256 amount, string fromChain);
     event FundsWithdrawn(uint256 indexed id, address indexed owner, uint256 amount);
     event RefundIssued(uint256 indexed id, address indexed donor, uint256 amount);
@@ -55,19 +75,17 @@ contract CrowdfundingStableV2 {
         _;
     }
 
-    constructor(address _usdc) {
-        require(_usdc != address(0), "Adresa invalida");
+    /// @param _usdc Adresa contractului USDC
+    /// @param _uniswapRouter Adresa Uniswap V2 Router
+    constructor(address _usdc, address _uniswapRouter) {
+        require(_usdc != address(0), "Adresa USDC invalida");
+        require(_uniswapRouter != address(0), "Adresa Router invalida");
         usdc = IERC20(_usdc);
+        uniswapRouter = IUniswapV2Router(_uniswapRouter);
+        weth = IUniswapV2Router(_uniswapRouter).WETH();
     }
 
     /// @notice Creeaza o campanie USDC cross-chain
-    /// @param _title Titlul campaniei
-    /// @param _description Descrierea campaniei
-    /// @param _goalUSDC Goalul in USDC (6 zecimale)
-    /// @param _durationDays Durata in zile
-    /// @param _mainChain Blockchain-ul principal ("eth" sau "sol")
-    /// @param _acceptedChains Chain-urile acceptate
-    /// @param _solanaId ID-ul contului Solana (pubkey) pentru campanii SOL main
     function createCampaign(
         string memory _title,
         string memory _description,
@@ -97,7 +115,6 @@ contract CrowdfundingStableV2 {
             solanaId: _solanaId
         });
 
-        // Daca main chain e SOL, inregistram mapping-ul solanaId => campaignId
         if (bytes(_solanaId).length > 0) {
             solanaToCampaign[_solanaId] = id;
             solanaIdExists[_solanaId] = true;
@@ -107,7 +124,44 @@ contract CrowdfundingStableV2 {
         return id;
     }
 
-    /// @notice Doneaza USDC local pe Ethereum
+    /// @notice Doneaza ETH direct - swap automat ETH->USDC via Uniswap V2
+    /// @dev Donatorul trimite ETH, contractul face swap pe Uniswap si primeste USDC
+    /// @dev Slippage: acceptam minim 95% din suma estimata (5% slippage maxim)
+    /// @param _id ID-ul campaniei
+    function donateETH(uint256 _id) external payable campaignExists(_id) {
+        Campaign storage campaign = campaigns[_id];
+        require(campaign.isActive, "Campania nu este activa");
+        require(block.timestamp < campaign.deadline, "Campania a expirat");
+        require(msg.value > 0, "Trimite ETH pentru donatie");
+
+        // Calculam suma minima USDC acceptata (95% din estimare - 5% slippage)
+        address[] memory path = new address[](2);
+        path[0] = weth;
+        path[1] = address(usdc);
+
+        uint[] memory amountsOut = uniswapRouter.getAmountsOut(msg.value, path);
+        uint256 amountOutMin = (amountsOut[1] * 95) / 100;
+
+        // Swap ETH -> USDC via Uniswap V2
+        uint[] memory amounts = uniswapRouter.swapExactETHForTokens{value: msg.value}(
+            amountOutMin,
+            path,
+            address(this),
+            block.timestamp + 300
+        );
+
+        uint256 usdcReceived = amounts[1];
+
+        // Inregistram donatia in USDC
+        donations[_id][msg.sender] += usdcReceived;
+        campaign.amountRaisedLocal += usdcReceived;
+        _checkGoal(campaign);
+
+        emit DonationETHSwapped(_id, msg.sender, msg.value, usdcReceived);
+        emit DonationReceived(_id, msg.sender, usdcReceived, "eth-swap");
+    }
+
+    /// @notice Doneaza USDC direct (fara swap)
     /// @dev Necesita approve() inainte
     function donateLocal(uint256 _id, uint256 _amount) external campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
@@ -124,19 +178,45 @@ contract CrowdfundingStableV2 {
         _checkGoal(campaign);
 
         require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer esuat");
-        emit DonationReceived(_id, msg.sender, _amount, "eth");
+        emit DonationReceived(_id, msg.sender, _amount, "eth-usdc");
     }
 
-    /// @notice Doneaza USDC pentru o campanie SOL identificata prin solanaId
-    /// @dev Permite donatorilor ETH sa doneze la campanii cu main chain SOL
-    /// @param _solanaId Pubkey-ul contului Solana al campaniei
-    /// @param _amount Suma in USDC (6 zecimale)
+    /// @notice Doneaza ETH pentru o campanie SOL (swap ETH->USDC)
+    function donateETHForSol(string memory _solanaId) external payable {
+        require(solanaIdExists[_solanaId], "Campania Solana nu exista pe ETH");
+        uint256 _id = solanaToCampaign[_solanaId];
+        Campaign storage campaign = campaigns[_id];
+        require(campaign.isActive, "Campania nu este activa");
+        require(msg.value > 0, "Trimite ETH pentru donatie");
+
+        address[] memory path = new address[](2);
+        path[0] = weth;
+        path[1] = address(usdc);
+
+        uint[] memory amountsOut = uniswapRouter.getAmountsOut(msg.value, path);
+        uint256 amountOutMin = (amountsOut[1] * 95) / 100;
+
+        uint[] memory amounts = uniswapRouter.swapExactETHForTokens{value: msg.value}(
+            amountOutMin,
+            path,
+            address(this),
+            block.timestamp + 300
+        );
+
+        uint256 usdcReceived = amounts[1];
+        donations[_id][msg.sender] += usdcReceived;
+        campaign.amountRaisedLocal += usdcReceived;
+        _checkGoal(campaign);
+
+        emit DonationETHSwapped(_id, msg.sender, msg.value, usdcReceived);
+    }
+
+    /// @notice Doneaza USDC pentru campanie SOL prin solanaId
     function donateForSolCampaign(string memory _solanaId, uint256 _amount) external {
         require(solanaIdExists[_solanaId], "Campania Solana nu exista pe ETH");
         uint256 _id = solanaToCampaign[_solanaId];
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
-        require(block.timestamp < campaign.deadline, "Campania a expirat");
         require(_amount > 0, "Suma invalida");
         require(
             usdc.allowance(msg.sender, address(this)) >= _amount,
@@ -148,10 +228,21 @@ contract CrowdfundingStableV2 {
         _checkGoal(campaign);
 
         require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer esuat");
-        emit DonationReceived(_id, msg.sender, _amount, "eth");
+        emit DonationReceived(_id, msg.sender, _amount, "eth-usdc");
     }
 
-    /// @notice Inregistreaza o donatie externa (SOL, etc.)
+    /// @notice Returneaza estimarea USDC pentru o suma ETH
+    /// @param _ethAmount Suma ETH in wei
+    /// @return Suma estimata USDC (cu 6 zecimale)
+    function getUSDCForETH(uint256 _ethAmount) external view returns (uint256) {
+        address[] memory path = new address[](2);
+        path[0] = weth;
+        path[1] = address(usdc);
+        uint[] memory amounts = uniswapRouter.getAmountsOut(_ethAmount, path);
+        return amounts[1];
+    }
+
+    /// @notice Inregistreaza o donatie externa (SOL)
     function recordExternalDonation(
         uint256 _id,
         uint256 _amount,
@@ -168,7 +259,7 @@ contract CrowdfundingStableV2 {
         emit ExternalDonationRecorded(_id, _amount, _fromChain);
     }
 
-    /// @notice Retrage USDC local dupa atingerea goalului
+    /// @notice Retrage USDC dupa atingerea goalului
     function withdraw(uint256 _id) external campaignExists(_id) onlyOwner(_id) {
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
@@ -206,7 +297,6 @@ contract CrowdfundingStableV2 {
         }
     }
 
-    /// @notice Returneaza campania dupa solanaId
     function getCampaignBySolanaId(string memory _solanaId) external view returns (Campaign memory, uint256) {
         require(solanaIdExists[_solanaId], "Campania Solana nu exista");
         uint256 id = solanaToCampaign[_solanaId];

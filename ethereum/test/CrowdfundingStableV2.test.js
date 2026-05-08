@@ -8,8 +8,10 @@ describe("CrowdfundingStableV2", async function () {
 
   async function deployAll() {
     const usdc = await viem.deployContract("MockERC20", ["USD Coin", "USDC", 6]);
-    const contract = await viem.deployContract("CrowdfundingStableV2", [usdc.address]);
-    return { usdc, contract };
+    const weth = await viem.deployContract("MockERC20", ["Wrapped ETH", "WETH", 18]);
+    const router = await viem.deployContract("MockUniswapRouter", [weth.address, usdc.address]);
+    const contract = await viem.deployContract("CrowdfundingStableV2", [usdc.address, router.address]);
+    return { usdc, weth, router, contract };
   }
 
   it("creeaza campanie cu main chain ETH", async function () {
@@ -57,6 +59,31 @@ describe("CrowdfundingStableV2", async function () {
     assert.equal(campaign.amountRaisedLocal, 50_000_000n);
   });
 
+  it("accepta donatii ETH cu swap automat la USDC", async function () {
+    const { contract } = await deployAll();
+    await contract.write.createCampaign([
+      "Test ETH Swap", "Desc", 1_000_000_000n, 30n,
+      "eth", ["eth"], ""
+    ]);
+
+    // Donator trimite 0.1 ETH -> swap la USDC (0.1 * 2000 = 200 USDC)
+    await contract.write.donateETH([0n], {
+      account: walletClients[1].account,
+      value: 100_000_000_000_000_000n // 0.1 ETH in wei
+    });
+
+    const campaign = await contract.read.getCampaign([0n]);
+    // 0.1 ETH * 2000 USDC/ETH = 200 USDC = 200_000_000 (6 decimale)
+    assert.equal(campaign.amountRaisedLocal, 200_000_000n);
+  });
+
+  it("getUSDCForETH returneaza estimarea corecta", async function () {
+    const { contract } = await deployAll();
+    // 1 ETH = 2000 USDC conform MockRouter
+    const estimate = await contract.read.getUSDCForETH([1_000_000_000_000_000_000n]);
+    assert.equal(estimate, 2_000_000_000n); // 2000 USDC cu 6 zecimale
+  });
+
   it("accepta donatii ETH pentru campanie SOL prin solanaId", async function () {
     const { usdc, contract } = await deployAll();
     const solanaId = "5bgwcbaeK9LCjpiPCvMTdvVxvLGTUKrhBH6ZtBhhyq1C";
@@ -73,8 +100,23 @@ describe("CrowdfundingStableV2", async function () {
     });
     const campaign = await contract.read.getCampaign([0n]);
     assert.equal(campaign.amountRaisedLocal, 50_000_000n);
-    const donation = await contract.read.getDonationForSol([solanaId, walletClients[1].account.address]);
-    assert.equal(donation, 50_000_000n);
+  });
+
+  it("accepta donatii ETH swap pentru campanie SOL", async function () {
+    const { contract } = await deployAll();
+    const solanaId = "5bgwcbaeK9LCjpiPCvMTdvVxvLGTUKrhBH6ZtBhhyq1C";
+    await contract.write.createCampaign([
+      "Test SOL ETH", "Desc", 1_000_000_000n, 30n,
+      "sol", ["eth", "sol"], solanaId
+    ]);
+
+    await contract.write.donateETHForSol([solanaId], {
+      account: walletClients[1].account,
+      value: 100_000_000_000_000_000n // 0.1 ETH
+    });
+
+    const campaign = await contract.read.getCampaign([0n]);
+    assert.equal(campaign.amountRaisedLocal, 200_000_000n); // 200 USDC
   });
 
   it("getCampaignBySolanaId returneaza campania corecta", async function () {
@@ -87,17 +129,6 @@ describe("CrowdfundingStableV2", async function () {
     const [campaign, id] = await contract.read.getCampaignBySolanaId([solanaId]);
     assert.equal(campaign.title, "Test SOL");
     assert.equal(id, 0n);
-  });
-
-  it("inregistreaza donatie externa SOL", async function () {
-    const { contract } = await deployAll();
-    await contract.write.createCampaign([
-      "Test", "Desc", 100_000_000n, 30n,
-      "eth", ["eth", "sol"], ""
-    ]);
-    await contract.write.recordExternalDonation([0n, 30_000_000n, "sol"]);
-    const campaign = await contract.read.getCampaign([0n]);
-    assert.equal(campaign.amountRaisedExternal, 30_000_000n);
   });
 
   it("goalReached cand total local + extern >= goal", async function () {

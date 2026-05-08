@@ -7,11 +7,13 @@ import ConnectWalletModal from "../../components/ConnectWalletModal";
 import "../CampaignDetail.css";
 import "./V2.css";
 
-const STABLE_V2_CONTRACT = "0x5Bf218455583dDC56213e3603D3d304D1B0dD006";
+const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
 const STABLE_V2_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSDC,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains,string solanaId))",
   "function getCampaignBySolanaId(string) view returns (tuple(address owner,string title,string description,uint256 goalUSDC,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains,string solanaId), uint256)",
   "function donateLocal(uint256,uint256)",
+  "function donateETH(uint256) payable",
+  "function donateETHForSol(string) payable",
   "function donateForSolCampaign(string,uint256)",
   "function withdraw(uint256)",
   "function refund(uint256)",
@@ -20,6 +22,7 @@ const STABLE_V2_ABI = [
   "function getDonationForSol(string,address) view returns (uint256)",
   "function getTotalRaised(uint256) view returns (uint256)",
   "function getExternalDonations(uint256,string) view returns (uint256)",
+  "function getUSDCForETH(uint256) view returns (uint256)",
 ];
 const USDC_ABI = [
   "function approve(address,uint256) returns (bool)",
@@ -47,6 +50,8 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
   const [userDonation, setUserDonation] = useState("0");
   const [step, setStep] = useState("approve");
   const [donateChain, setDonateChain] = useState(blockchain || "eth");
+  const [donateMode, setDonateMode] = useState("usdc"); // "usdc" sau "eth-native"
+  const [ethEstimate, setEthEstimate] = useState("0");
 
   async function loadEthCampaign() {
     const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
@@ -139,6 +144,21 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
 
   useEffect(() => { loadData(); }, [id, blockchain, ethAddress]);
 
+  // Estimare USDC pentru suma ETH introdusa
+  useEffect(() => {
+    async function estimateUSDC() {
+      if (!amount || Number(amount) <= 0 || donateMode !== "eth-native") return;
+      try {
+        const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
+        const contract = new ethers.Contract(STABLE_V2_CONTRACT, STABLE_V2_ABI, provider);
+        const ethInWei = ethers.parseEther(amount);
+        const usdc = await contract.getUSDCForETH(ethInWei);
+        setEthEstimate((Number(usdc) / 1_000_000).toFixed(2));
+      } catch(e) { setEthEstimate("0"); }
+    }
+    estimateUSDC();
+  }, [amount, donateMode]);
+
   async function getEthSigner() {
     const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;
     const provider = new ethers.BrowserProvider(metamask);
@@ -183,6 +203,29 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
       setAmount(""); setStep("approve");
       await loadData();
     } catch (e) { setError(e.reason || e.message || "Eroare donatie."); }
+    setDonating(false);
+  }
+
+  async function handleDonateETHNative() {
+    setError(""); setSuccess("");
+    if (!ethConnected) { setShowModal(true); return; }
+    if (!amount || Number(amount) <= 0) { setError("Introdu o suma valida in ETH."); return; }
+    setDonating(true);
+    try {
+      const signer = await getEthSigner();
+      const contract = new ethers.Contract(STABLE_V2_CONTRACT, STABLE_V2_ABI, signer);
+      const ethInWei = ethers.parseEther(amount);
+      let tx;
+      if (blockchain === "sol" && campaign?.solanaId) {
+        tx = await contract.donateETHForSol(campaign.solanaId, { value: ethInWei });
+      } else {
+        tx = await contract.donateETH(Number(id), { value: ethInWei });
+      }
+      await tx.wait();
+      setSuccess(`Donatie ${amount} ETH convertita in ~$${ethEstimate} USDC!`);
+      setAmount("");
+      await loadData();
+    } catch (e) { setError(e.reason || e.message || "Eroare donatie ETH."); }
     setDonating(false);
   }
 
@@ -390,27 +433,65 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
                 )}
 
                 {donateChain === "eth" && (
+                  <div style={{display:"flex", gap:"4px", marginBottom:"12px"}}>
+                    <button onClick={() => setDonateMode("usdc")} style={{
+                      flex:1, padding:"6px", borderRadius:"var(--radius-lg)", cursor:"pointer", fontSize:"12px", fontWeight:"600",
+                      border:`2px solid ${donateMode === "usdc" ? "#2775CA" : "var(--border)"}`,
+                      background: donateMode === "usdc" ? "rgba(39,117,202,0.1)" : "var(--cream)",
+                      color: donateMode === "usdc" ? "#2775CA" : "var(--text-muted)"
+                    }}>USDC direct</button>
+                    <button onClick={() => setDonateMode("eth-native")} style={{
+                      flex:1, padding:"6px", borderRadius:"var(--radius-lg)", cursor:"pointer", fontSize:"12px", fontWeight:"600",
+                      border:`2px solid ${donateMode === "eth-native" ? "#627EEA" : "var(--border)"}`,
+                      background: donateMode === "eth-native" ? "rgba(98,126,234,0.1)" : "var(--cream)",
+                      color: donateMode === "eth-native" ? "#627EEA" : "var(--text-muted)"
+                    }}>ETH (swap auto)</button>
+                  </div>
+                )}
+
+                {donateChain === "eth" && donateMode === "usdc" && (
                   <div className="usdc-note" style={{marginBottom:"12px"}}>
                     <span>{step === "approve" ? "Pas 1/2: Aproba USDC" : "Pas 2/2: Doneaza"}</span>
                   </div>
                 )}
 
+                {donateChain === "eth" && donateMode === "eth-native" && (
+                  <div className="usdc-note" style={{marginBottom:"12px", borderColor:"rgba(98,126,234,0.3)", background:"rgba(98,126,234,0.1)", color:"#627EEA"}}>
+                    <span>Trimiti ETH, primesti USDC automat via Uniswap</span>
+                  </div>
+                )}
+
                 <div className="donate-input-wrap">
-                  <input className="form-input donate-input" type="number" step="1" min="0"
+                  <input className="form-input donate-input"
+                    type="number" step={donateMode === "eth-native" ? "0.001" : "1"} min="0"
                     placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} />
-                  <span className="donate-currency">USDC</span>
+                  <span className="donate-currency">{donateChain === "sol" ? "USDC" : donateMode === "eth-native" ? "ETH" : "USDC"}</span>
                 </div>
 
-                <div className="donate-presets">
-                  {["10","50","100"].map(v => (
-                    <button key={v} className="preset-btn" onClick={() => setAmount(v)}>${v}</button>
-                  ))}
-                </div>
+                {donateMode === "eth-native" && amount && Number(amount) > 0 && (
+                  <div style={{fontSize:"12px", color:"#627EEA", marginBottom:"8px", textAlign:"center"}}>
+                    Estimare: ~${ethEstimate} USDC
+                  </div>
+                )}
+
+                {donateMode === "usdc" && (
+                  <div className="donate-presets">
+                    {["10","50","100"].map(v => (
+                      <button key={v} className="preset-btn" onClick={() => setAmount(v)}>${v}</button>
+                    ))}
+                  </div>
+                )}
 
                 {error && <div className="form-error">{error}</div>}
                 {success && <div className="form-success">{success}</div>}
 
-                {donateChain === "eth" ? (
+                {donateChain === "eth" && donateMode === "eth-native" ? (
+                  <button className="btn-usdc donate-btn"
+                    style={{width:"100%", justifyContent:"center", background:"#627EEA"}}
+                    onClick={handleDonateETHNative} disabled={donating}>
+                    {donating ? "Se proceseaza..." : ethConnected ? `Doneaza ${amount || "0"} ETH` : "Conecteaza MetaMask"}
+                  </button>
+                ) : donateChain === "eth" ? (
                   step === "approve" ? (
                     <button className="btn-usdc donate-btn" style={{width:"100%", justifyContent:"center"}}
                       onClick={handleApproveEth} disabled={approving}>
@@ -453,7 +534,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
 
             {isOwner && campaign.goalReached && campaign.isActive && blockchain === "eth" && (
               <div className="withdraw-card card">
-                <h3 className="withdraw-title">Goal atins! ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Â°</h3>
+                <h3 className="withdraw-title">Goal atins! ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°</h3>
                 <p>Retrage ${raisedLocal} USDC din Ethereum.</p>
                 <button className="btn-usdc" style={{width:"100%", justifyContent:"center"}} onClick={handleWithdraw}>
                   Retrage ETH USDC

@@ -6,7 +6,7 @@ import * as anchor from "@coral-xyz/anchor";
 import "./V2.css";
 import "../CreateCampaign.css";
 
-const STABLE_V2_CONTRACT = "0x5Bf218455583dDC56213e3603D3d304D1B0dD006";
+const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
 const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
 const USDC_MINT_DEVNET = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
@@ -146,7 +146,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
           <div className="create-form card">
 
             <div className="usdc-note">
-              <span>💡</span>
+              <span>ðŸ’¡</span>
               <span>1 USDC = $1 USD intotdeauna, pe orice blockchain.</span>
             </div>
 
@@ -199,7 +199,7 @@ export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, 
                       display:"flex", alignItems:"center", justifyContent:"center",
                       color:"white", fontSize:"12px", fontWeight:"700"
                     }}>
-                      {acceptedChains.includes(chain.id) ? "✓" : ""}
+                      {acceptedChains.includes(chain.id) ? "âœ“" : ""}
                     </span>
                     <div>
                       <div style={{fontWeight:"600", fontSize:"14px", color:"var(--navy)"}}>{chain.name}</div>
