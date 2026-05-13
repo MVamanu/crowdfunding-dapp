@@ -5,16 +5,14 @@ import { SOLANA_RPC_URL } from "../config/chains";
 
 export function useSolanaProgram(wallet) {
   const [program, setProgram] = useState(null);
-  const [connection, setConnection] = useState(null);
+  const [connection] = useState(() => new Connection(SOLANA_RPC_URL, "confirmed"));
 
   useEffect(() => {
-    const conn = new Connection(SOLANA_RPC_URL, "confirmed");
-    setConnection(conn);
-
-    if (wallet && wallet.publicKey) {
+    queueMicrotask(() => {
+      if (!wallet?.publicKey) return;
       try {
         const provider = new anchor.AnchorProvider(
-          conn,
+          connection,
           wallet,
           { commitment: "confirmed" }
         );
@@ -23,8 +21,8 @@ export function useSolanaProgram(wallet) {
       } catch (e) {
         console.error("Solana program init error:", e);
       }
-    }
-  }, [wallet]);
+    });
+  }, [connection, wallet]);
 
   return { program, connection };
 }

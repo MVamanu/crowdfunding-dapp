@@ -143,7 +143,10 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [id, blockchain, ethAddress]);
+  useEffect(() => {
+    queueMicrotask(() => loadData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, blockchain, ethAddress]);
 
   // Estimare USDC pentru suma ETH introdusa
   useEffect(() => {

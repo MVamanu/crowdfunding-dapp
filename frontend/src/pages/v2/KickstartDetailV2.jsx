@@ -138,7 +138,8 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
   }
 
   useEffect(() => {
-    loadData();
+    queueMicrotask(() => loadData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, ethAddress]);
 
   useEffect(() => {

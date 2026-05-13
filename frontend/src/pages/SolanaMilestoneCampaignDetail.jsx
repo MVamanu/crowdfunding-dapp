@@ -52,7 +52,10 @@ export default function SolanaMilestoneCampaignDetail({ solWallet, solConnected,
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [id]);
+  useEffect(() => {
+    queueMicrotask(() => loadData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   async function handleDonate() {
     setError(""); setSuccess("");

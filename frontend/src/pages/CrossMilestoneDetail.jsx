@@ -71,7 +71,10 @@ export default function CrossMilestoneDetail({ ethConnected, ethAddress, solWall
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [id, ethAddress, prices]);
+  useEffect(() => {
+    queueMicrotask(() => loadData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, ethAddress, prices]);
 
   async function getSignerContract() {
     const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;

@@ -68,7 +68,10 @@ export default function MilestoneCampaignDetail({ ethConnected, ethAddress, onCo
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [id, ethAddress]);
+  useEffect(() => {
+    queueMicrotask(() => loadData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, ethAddress]);
 
   async function getSignerContract() {
     const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;
