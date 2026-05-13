@@ -8,6 +8,7 @@ import "./Home.css";
 import "./AllCampaigns.css";
 import "../components/CampaignCard.css";
 import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
+import { getDaysLeft } from "../utils/time";
 
 const ETH_ADDRESS = CONTRACTS.eth;
 const ETH_MILESTONE_ADDRESS = CONTRACTS.milestone;
@@ -187,7 +188,7 @@ export default function AllCampaigns() {
             <div className="campaigns-grid">
               {filtered.map(c => {
                 const progress = Math.min(c.goalUSD > 0 ? (c.raisedUSD / c.goalUSD) * 100 : 0, 100);
-                const daysLeft = Math.max(0, Math.ceil((c.deadline - Date.now()) / 86400000));
+                const daysLeft = getDaysLeft(c.deadline);
                 return (
                   <Link to={c.route} key={c.id} className="campaign-card card">
                     <div className="card-header">

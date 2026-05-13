@@ -6,6 +6,7 @@ import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../components/ConnectWalletModal";
 import "./CampaignDetail.css";
 import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
+import { getDaysLeft } from "../utils/time";
 
 const ETH_CONTRACT_ADDRESS = CONTRACTS.eth;
 const ETH_ABI = [
@@ -130,7 +131,7 @@ export default function CampaignDetail({ ethContract, ethConnected, ethAddress, 
   const goalFormatted = isSol ? (Number(campaign.goal) / 1e9).toFixed(4) : ethers.formatEther(campaign.goal);
   const raisedFormatted = isSol ? (Number(campaign.amountRaised) / 1e9).toFixed(4) : ethers.formatEther(campaign.amountRaised);
   const progress = Math.min((Number(campaign.amountRaised) / Number(campaign.goal)) * 100, 100);
-  const daysLeft = Math.max(0, Math.ceil((campaign.deadline - Date.now()) / 86400000));
+  const daysLeft = getDaysLeft(campaign.deadline);
   const isOwner = isSol
     ? solWallet?.publicKey?.toString() === campaign.owner
     : ethAddress?.toLowerCase() === campaign.owner?.toLowerCase();

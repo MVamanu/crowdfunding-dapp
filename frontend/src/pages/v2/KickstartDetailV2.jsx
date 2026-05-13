@@ -5,6 +5,7 @@ import ConnectWalletModal from "../../components/ConnectWalletModal";
 import "../CampaignDetail.css";
 import "./V2.css";
 import { CONTRACTS, SEPOLIA_RPC_URL, UNISWAP, USDC } from "../../config/chains";
+import { getDaysLeft } from "../../utils/time";
 
 const STABLE_MILESTONE_CONTRACT = CONTRACTS.stableMilestone;
 const USDC_ADDRESS = USDC.sepoliaAddress;
@@ -357,7 +358,7 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
   const swapUsdcInvalid = !swapUsdcAmount || Number(swapUsdcAmount) <= 0;
   const maxEthForSwap = quotedEth > 0n ? addSlippage(quotedEth) : 0n;
   const insufficientEth = maxEthForSwap >= ethBalance;
-  const daysLeft = Math.max(0, Math.ceil((campaign.deadline * 1000 - Date.now()) / 86400000));
+  const daysLeft = getDaysLeft(campaign.deadline * 1000);
   const isOwner = ethAddress?.toLowerCase() === campaign.owner?.toLowerCase();
   const currentMilestone = milestones[campaign.currentMilestone];
   const canVote = currentMilestone?.votingActive && votingPower > 0n;

@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
 import "./UnifiedCampaigns.css";
 import { CONTRACTS, SEPOLIA_RPC_URL } from "../config/chains";
+import { getDaysLeft } from "../utils/time";
 
 const UNIFIED_CONTRACT = CONTRACTS.unified;
 const UNIFIED_ABI = [
@@ -69,7 +70,7 @@ export default function UnifiedCampaigns() {
             {campaigns.map(c => {
               const raisedUSD = (Number(c.amountRaisedETH) / 1e18) * prices.eth;
               const progress = Math.min((raisedUSD / c.goalUSD) * 100, 100);
-              const daysLeft = Math.max(0, Math.ceil((c.deadline - Date.now()) / 86400000));
+              const daysLeft = getDaysLeft(c.deadline);
               return (
                 <Link to={`/unified/${c.id}`} key={c.id} className="unified-card card">
                   <div className="unified-card-header">

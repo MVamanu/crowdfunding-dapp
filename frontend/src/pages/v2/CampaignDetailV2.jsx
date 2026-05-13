@@ -6,6 +6,7 @@ import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../../components/ConnectWalletModal";
 import "../CampaignDetail.css";
 import "./V2.css";
+import { getDaysLeft, isPastDeadline } from "../../utils/time";
 
 const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
 const STABLE_V2_ABI = [
@@ -321,12 +322,12 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
   const raisedUSDC = (totalRaised / 1_000_000).toFixed(2);
   const raisedLocal = (Number(campaign.amountRaisedLocal || 0n) / 1_000_000).toFixed(2);
   const raisedExternal = (Number(campaign.amountRaisedExternal || 0n) / 1_000_000).toFixed(2);
-  const daysLeft = Math.max(0, Math.ceil((campaign.deadline - Date.now()) / 86400000));
+  const daysLeft = getDaysLeft(campaign.deadline);
   const isOwner = blockchain === "eth"
     ? ethAddress?.toLowerCase() === campaign.owner?.toLowerCase()
     : solWallet?.publicKey?.toString() === campaign.owner;
   const isDonor = BigInt(userDonation) > 0n;
-  const isExpired = campaign.deadline < Date.now();
+  const isExpired = isPastDeadline(campaign.deadline);
   const chainColor = blockchain === "sol" ? "#9945FF" : "#2775CA";
   const solWalletReady = solConnected || !!solWallet;
 

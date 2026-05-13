@@ -5,6 +5,7 @@ import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import "../AllCampaigns.css";
 import "./V2.css";
+import { getDaysLeft } from "../../utils/time";
 
 const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
 const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
@@ -76,7 +77,9 @@ export default function AllCampaignsV2() {
               );
               const tokenAccInfo = await connection.getTokenAccountBalance(vaultPDA);
               vaultBalance = Number(tokenAccInfo.value.amount);
-            } catch {}
+            } catch {
+              vaultBalance = Number(d.amountRaised);
+            }
             all.push({
               id: `sol-${acc.publicKey.toString()}`,
               title: d.title,
@@ -170,7 +173,7 @@ export default function AllCampaignsV2() {
             <div className="campaigns-grid">
               {filtered.map(c => {
                 const progress = Math.min(c.goal > 0 ? (c.amountRaised / c.goal) * 100 : 0, 100);
-                const daysLeft = Math.max(0, Math.ceil((c.deadline - Date.now()) / 86400000));
+                const daysLeft = getDaysLeft(c.deadline);
                 const goalUSDC = (c.goal / 1_000_000).toFixed(2);
                 const raisedUSDC = (c.amountRaised / 1_000_000).toFixed(2);
                 const chainColor = c.blockchain === "sol" ? "#9945FF" : "#2775CA";

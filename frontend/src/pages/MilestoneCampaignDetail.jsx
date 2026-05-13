@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import ConnectWalletModal from "../components/ConnectWalletModal";
 import "./MilestoneCampaignDetail.css";
 import { CONTRACTS, SEPOLIA_RPC_URL } from "../config/chains";
+import { getDaysLeft } from "../utils/time";
 
 const MILESTONE_CONTRACT = CONTRACTS.milestone;
 const MILESTONE_ABI = [
@@ -135,7 +136,7 @@ export default function MilestoneCampaignDetail({ ethConnected, ethAddress, onCo
   const progress = Math.min((Number(campaign.amountRaised) / Number(campaign.totalGoal)) * 100, 100);
   const goalEth = ethers.formatEther(campaign.totalGoal);
   const raisedEth = ethers.formatEther(campaign.amountRaised);
-  const daysLeft = Math.max(0, Math.ceil((campaign.deadline - Date.now()) / 86400000));
+  const daysLeft = getDaysLeft(campaign.deadline);
   const isOwner = ethAddress?.toLowerCase() === campaign.owner?.toLowerCase();
   const isDonor = BigInt(userDonation) > 0n;
   const goalReached = Number(campaign.amountRaised) >= Number(campaign.totalGoal);

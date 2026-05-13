@@ -1,13 +1,14 @@
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
+import { getDaysLeft } from "../utils/time";
 import "./CampaignCard.css";
 
 export default function CampaignCard({ campaign }) {
   const { id, title, description, goal, amountRaised, isActive, blockchain, owner, deadline } = campaign;
   const { formatUSD } = useCryptoPrices();
   const progress = Math.min((Number(amountRaised) / Number(goal)) * 100, 100);
-  const daysLeft = deadline ? Math.max(0, Math.ceil((new Date(deadline) - Date.now()) / 86400000)) : null;
+  const daysLeft = deadline ? getDaysLeft(new Date(deadline)) : null;
   const isSol = blockchain === "sol";
   const raisedNative = isSol ? (Number(amountRaised) / 1e9).toFixed(4) : ethers.formatEther(amountRaised || "0");
   const goalNative = isSol ? (Number(goal) / 1e9).toFixed(4) : ethers.formatEther(goal || "0");

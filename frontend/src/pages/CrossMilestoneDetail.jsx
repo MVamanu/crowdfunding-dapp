@@ -7,6 +7,7 @@ import ConnectWalletModal from "../components/ConnectWalletModal";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
 import "./MilestoneCampaignDetail.css";
 import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_RPC_URL } from "../config/chains";
+import { getDaysLeft } from "../utils/time";
 
 const CROSS_CONTRACT = CONTRACTS.crossMilestone;
 const CROSS_ABI = [
@@ -176,7 +177,7 @@ export default function CrossMilestoneDetail({ ethConnected, ethAddress, solWall
   const raisedETHusd = (Number(campaign.amountRaisedETH) / 1e18) * prices.eth;
   const totalRaisedUSD = raisedETHusd + campaign.amountRaisedSOLusd;
   const progress = Math.min((totalRaisedUSD / campaign.goalUSD) * 100, 100);
-  const daysLeft = Math.max(0, Math.ceil((campaign.deadline - Date.now()) / 86400000));
+  const daysLeft = getDaysLeft(campaign.deadline);
   const isOwner = ethAddress?.toLowerCase() === campaign.owner?.toLowerCase();
   const isDonorETH = BigInt(userDonationETH) > 0n;
   const currentM = milestones[campaign.currentMilestone];
