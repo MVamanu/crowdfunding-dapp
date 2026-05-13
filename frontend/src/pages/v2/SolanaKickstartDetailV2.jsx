@@ -42,6 +42,16 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
     return { connection, program: new anchor.Program(idl, provider) };
   }
 
+  function getProgramMethod(program, methodName) {
+    const method = program.methods[methodName];
+    if (!method) {
+      throw new Error(
+        `IDL-ul Solana de pe devnet nu contine ${methodName}. Redeploy/upgrade programul si IDL-ul pentru campaniile USDC milestone pe Solana.`
+      );
+    }
+    return method;
+  }
+
   async function loadData() {
     setLoading(true);
     try {
@@ -121,8 +131,7 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
         USDC.solanaDevnetMint
       );
 
-      const builder = program.methods
-        .donateUsdcMilestone(toUsdcAmount(amount))
+      const builder = getProgramMethod(program, "donateUsdcMilestone")(toUsdcAmount(amount))
         .accounts({
           usdcMilestoneCampaign: campaignPubkey,
           vault: vaultPDA,
@@ -142,8 +151,7 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
   async function handleSubmitMilestone() {
     await runAction(async () => {
       const { program } = await getProgram(solWallet);
-      await program.methods
-        .submitUsdcMilestone()
+      await getProgramMethod(program, "submitUsdcMilestone")()
         .accounts({
           usdcMilestoneCampaign: new PublicKey(id),
           owner: solWallet.publicKey,
@@ -165,8 +173,7 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
         [textEncoder.encode("vote_usdc_milestone"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer(), Uint8Array.of(milestoneIdx)],
         SOLANA_PROGRAM_ID
       );
-      await program.methods
-        .voteUsdcMilestone(milestoneIdx, approve)
+      await getProgramMethod(program, "voteUsdcMilestone")(milestoneIdx, approve)
         .accounts({
           usdcMilestoneCampaign: campaignPubkey,
           voter: solWallet.publicKey,
@@ -193,8 +200,7 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
         solWallet.publicKey,
         USDC.solanaDevnetMint
       );
-      const builder = program.methods
-        .finalizeUsdcMilestone(milestoneIdx)
+      const builder = getProgramMethod(program, "finalizeUsdcMilestone")(milestoneIdx)
         .accounts({
           usdcMilestoneCampaign: campaignPubkey,
           vault: vaultPDA,

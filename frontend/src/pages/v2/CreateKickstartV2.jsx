@@ -131,14 +131,20 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
         const idl = await anchor.Program.fetchIdl(SOLANA_PROGRAM_ID, provider);
         if (!idl) throw new Error("Nu s-a putut obtine IDL-ul Solana.");
         const program = new anchor.Program(idl, provider);
+        const createUsdcMilestoneCampaign = program.methods.createUsdcMilestoneCampaign;
+        if (!createUsdcMilestoneCampaign) {
+          throw new Error(
+            "IDL-ul Solana de pe devnet nu contine createUsdcMilestoneCampaign. Redeploy/upgrade programul si IDL-ul pentru a activa campaniile USDC milestone pe Solana."
+          );
+        }
+
         const campaignKeypair = Keypair.generate();
         const [vaultPDA] = PublicKey.findProgramAddressSync(
           [textEncoder.encode("usdc_milestone_vault"), campaignKeypair.publicKey.toBuffer()],
           SOLANA_PROGRAM_ID
         );
 
-        await program.methods
-          .createUsdcMilestoneCampaign(
+        await createUsdcMilestoneCampaign(
             form.title,
             form.description,
             milestones.map(milestone => milestone.title),
