@@ -1,6 +1,6 @@
 # FundChain — Platformă Cross-Chain de Crowdfunding
 
-> Lucrare de disertație — Universitatea Spiru Haret București  
+> Lucrare de disertație — Universitatea Spiru Haret București
 > Student: Marian Dumitru Vamanu  
 > Coordonator: Conf. Univ. Dr. Marius Iulian Mihailescu
 
