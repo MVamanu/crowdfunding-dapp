@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ethers } from "ethers";
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../../components/ConnectWalletModal";
 import "../CampaignDetail.css";
 import "./V2.css";
-import { SOLANA_PROGRAM_ID, SOLANA_RPC_URL, SPL_TOKEN_PROGRAM_ID, USDC } from "../../config/chains";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL, SPL_TOKEN_PROGRAM_ID, USDC } from "../../config/chains";
 import { createAtaInstructionIfMissing } from "../../utils/solanaToken";
 
 const textEncoder = new TextEncoder();
+const STABLE_MILESTONE_CONTRACT = CONTRACTS.stableMilestone;
+const SOLANA_ETH_MIRROR_CACHE_KEY = "kickstart_v2_sol_eth_mirrors";
+const STABLE_MILESTONE_ABI = [
+  "function campaignCount() view returns (uint256)",
+  "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 totalGoal,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains,uint256 milestoneCount,uint256 currentMilestone))",
+  "function campaignChains(uint256,uint256) view returns (string chainName,string contractAddress,bool active)",
+];
 
 function formatUsdc(amount) {
   return (Number(amount) / 1_000_000).toFixed(2);
@@ -28,6 +36,7 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [ethMirror, setEthMirror] = useState(null);
 
   async function getProgram(wallet) {
     const connection = new Connection(SOLANA_RPC_URL, "confirmed");
@@ -52,12 +61,74 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
     return method;
   }
 
+  async function getEthMirror() {
+    if (!STABLE_MILESTONE_CONTRACT) return null;
+
+    const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC_URL);
+    const contract = new ethers.Contract(STABLE_MILESTONE_CONTRACT, STABLE_MILESTONE_ABI, provider);
+    const cachedMirrors = JSON.parse(localStorage.getItem(SOLANA_ETH_MIRROR_CACHE_KEY) || "{}");
+    const cachedId = cachedMirrors[id];
+
+    async function loadMirror(ethId) {
+      const rawCampaign = await contract.getCampaign(ethId);
+      return {
+        id: Number(ethId),
+        title: rawCampaign.title,
+        amountRaised: BigInt(rawCampaign.amountRaisedLocal) + BigInt(rawCampaign.amountRaisedExternal),
+        totalGoal: BigInt(rawCampaign.totalGoal),
+        isActive: rawCampaign.isActive,
+        acceptedChains: rawCampaign.acceptedChains,
+      };
+    }
+
+    if (cachedId !== undefined) {
+      try {
+        return await loadMirror(Number(cachedId));
+      } catch {
+        delete cachedMirrors[id];
+        localStorage.setItem(SOLANA_ETH_MIRROR_CACHE_KEY, JSON.stringify(cachedMirrors));
+      }
+    }
+
+    const count = Number(await contract.campaignCount());
+    for (let campaignId = count - 1; campaignId >= 0; campaignId--) {
+      const rawCampaign = await contract.getCampaign(campaignId);
+      if (rawCampaign.mainChain !== "sol") continue;
+
+      for (let chainIndex = 0; chainIndex < rawCampaign.acceptedChains.length; chainIndex++) {
+        try {
+          const chain = await contract.campaignChains(campaignId, chainIndex);
+          const chainName = chain.chainName || chain[0];
+          const contractAddress = chain.contractAddress || chain[1];
+          if (chainName === "sol" && contractAddress === id) {
+            cachedMirrors[id] = campaignId;
+            localStorage.setItem(SOLANA_ETH_MIRROR_CACHE_KEY, JSON.stringify(cachedMirrors));
+            return {
+              id: campaignId,
+              title: rawCampaign.title,
+              amountRaised: BigInt(rawCampaign.amountRaisedLocal) + BigInt(rawCampaign.amountRaisedExternal),
+              totalGoal: BigInt(rawCampaign.totalGoal),
+              isActive: rawCampaign.isActive,
+              acceptedChains: rawCampaign.acceptedChains,
+            };
+          }
+        } catch {
+          // Older or incomplete records can be skipped.
+        }
+      }
+    }
+
+    return null;
+  }
+
   async function loadData() {
     setLoading(true);
     try {
       const { program } = await getProgram(null);
       const pubkey = new PublicKey(id);
       const account = await program.account.usdcMilestoneCampaign.fetch(pubkey);
+      const mirror = await getEthMirror();
+      setEthMirror(mirror);
       setCampaign({
         id,
         pubkey,
@@ -77,6 +148,7 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
       });
     } catch (e) {
       console.error(e);
+      setEthMirror(null);
       setCampaign(null);
     } finally {
       setLoading(false);
@@ -218,6 +290,8 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
   if (!campaign) return <div className="detail-loading"><p>Campanie Solana negasita.</p></div>;
 
   const progress = Math.min(Number(campaign.totalGoal) > 0 ? (Number(campaign.amountRaised) / Number(campaign.totalGoal)) * 100 : 0, 100);
+  const crossChainRaised = BigInt(campaign.amountRaised) + BigInt(ethMirror?.amountRaised || 0n);
+  const crossChainProgress = Math.min(Number(campaign.totalGoal) > 0 ? (Number(crossChainRaised) / Number(campaign.totalGoal)) * 100 : 0, 100);
   const isOwner = solAddress === campaign.owner;
   const currentMilestone = campaign.milestones[campaign.currentMilestone];
   const canDonate = campaign.isActive;
@@ -265,9 +339,19 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
               </div>
               <div className="progress-stats">
                 <div className="pstat"><span className="pstat-value">${formatUsdc(campaign.amountRaised)}</span><span className="pstat-label">Vault USDC</span></div>
+                <div className="pstat"><span className="pstat-value">${formatUsdc(ethMirror?.amountRaised || 0n)}</span><span className="pstat-label">Mirror ETH</span></div>
                 <div className="pstat"><span className="pstat-value">${formatUsdc(campaign.releasedLocal)}</span><span className="pstat-label">Eliberat</span></div>
                 <div className="pstat"><span className="pstat-value">{campaign.currentMilestone + 1}/{campaign.milestoneCount}</span><span className="pstat-label">Milestone</span></div>
               </div>
+              {ethMirror && (
+                <div className="progress-header" style={{ marginTop: "14px" }}>
+                  <div>
+                    <span className="progress-raised">${formatUsdc(crossChainRaised)} USDC</span>
+                    <span className="progress-label"> total cross-chain afisat</span>
+                  </div>
+                  <span className="progress-pct">{crossChainProgress.toFixed(1)}%</span>
+                </div>
+              )}
             </div>
 
             <div className="detail-progress card">
@@ -304,6 +388,20 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
                 </div>
                 <button className="btn-usdc donate-btn" style={{ width: "100%", justifyContent: "center" }} onClick={handleDonate} disabled={busy}>
                   {busy ? "Se proceseaza..." : "Doneaza USDC pe Solana"}
+                </button>
+              </div>
+            )}
+
+            {ethMirror && (
+              <div className="donate-card card">
+                <h3 className="donate-title">Donatii Ethereum</h3>
+                <p className="donate-helper">Mirror-ul ETH accepta USDC direct si ETH schimbat automat in USDC prin Uniswap.</p>
+                <div className="progress-stats">
+                  <div className="pstat"><span className="pstat-value">${formatUsdc(ethMirror.amountRaised)}</span><span className="pstat-label">ETH mirror</span></div>
+                  <div className="pstat"><span className="pstat-value">${formatUsdc(ethMirror.totalGoal)}</span><span className="pstat-label">Goal</span></div>
+                </div>
+                <button className="btn-usdc donate-btn" style={{ width: "100%", justifyContent: "center" }} onClick={() => navigate(`/v2/kickstart/${ethMirror.id}`)}>
+                  Doneaza din Ethereum
                 </button>
               </div>
             )}

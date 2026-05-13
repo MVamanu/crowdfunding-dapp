@@ -11,7 +11,9 @@ import { CONTRACTS, SOLANA_PROGRAM_ID, SOLANA_RPC_URL, SPL_TOKEN_PROGRAM_ID, USD
 const STABLE_MILESTONE_CONTRACT = CONTRACTS.stableMilestone;
 const STABLE_MILESTONE_ABI = [
   "function createCampaign(string,string,uint256,string,string[],string[],string[],string[],uint256[]) returns (uint256)",
+  "event CampaignCreated(uint256 indexed id,address indexed owner,string title,uint256 totalGoal,string mainChain)",
 ];
+const SOLANA_ETH_MIRROR_CACHE_KEY = "kickstart_v2_sol_eth_mirrors";
 
 const CHAINS = [
   { id: "eth", name: "Ethereum", color: "#627EEA" },
@@ -89,7 +91,18 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
       milestones.map(milestone => milestone.description),
       milestones.map(milestone => toUsdcAmount(milestone.amount))
     );
-    await tx.wait();
+    const receipt = await tx.wait();
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog(log);
+        if (parsed?.name === "CampaignCreated") {
+          return Number(parsed.args.id);
+        }
+      } catch {
+        // Ignore logs emitted by other contracts in the transaction.
+      }
+    }
+    return null;
   }
 
   async function createOnSolana() {
@@ -187,7 +200,12 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
       if (acceptedChains.includes("eth")) {
         setStatus(mainChain === "eth" ? "Creez campania principala pe Ethereum..." : "Creez mirror-ul Ethereum USDC...");
         const externalAddresses = acceptedChains.map(chain => chain === "sol" ? solanaCampaignId : "");
-        await createOnEth(externalAddresses);
+        const ethCampaignId = await createOnEth(externalAddresses);
+        if (mainChain === "sol" && solanaCampaignId && ethCampaignId !== null) {
+          const mirrors = JSON.parse(localStorage.getItem(SOLANA_ETH_MIRROR_CACHE_KEY) || "{}");
+          mirrors[solanaCampaignId] = ethCampaignId;
+          localStorage.setItem(SOLANA_ETH_MIRROR_CACHE_KEY, JSON.stringify(mirrors));
+        }
       }
 
       navigate(mainChain === "sol" && solanaCampaignId ? `/v2/kickstart/sol/${solanaCampaignId}` : "/v2/kickstart");
