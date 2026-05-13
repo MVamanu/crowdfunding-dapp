@@ -14,7 +14,7 @@ const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
 const ETH_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goal,uint256 amountRaised,bool isActive,uint256 deadline))", "function campaignCount() view returns (uint256)"];
 const ETH_UNIFIED_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSD,uint256 amountRaisedETH,bool isActive,uint256 deadline,string solanaAddress))", "function campaignCount() view returns (uint256)"];
 
-export default function OngCampaigns({ solWallet }) {
+export default function OngCampaigns() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");

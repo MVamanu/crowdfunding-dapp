@@ -67,7 +67,7 @@ export default function App() {
             setSolWalletName("Phantom");
             setSolConnected(true);
           }
-        } catch (e) { console.log("Sol auto-connect skip"); }
+        } catch { console.log("Sol auto-connect skip"); }
       }
       // ETH auto-connect ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â foloseste eth_accounts (nu deschide popup)
       if (window.ethereum) {

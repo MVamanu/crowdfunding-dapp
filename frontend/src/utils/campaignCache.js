@@ -10,7 +10,7 @@ export function loadCampaignsFromCache() {
   try {
     const data = localStorage.getItem(CACHE_KEY);
     return data ? JSON.parse(data) : [];
-  } catch (e) { return []; }
+  } catch { return []; }
 }
 
 export function addCampaignToCache(campaign) {

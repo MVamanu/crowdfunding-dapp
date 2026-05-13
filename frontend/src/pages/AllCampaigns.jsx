@@ -19,12 +19,12 @@ const ETH_ABI = ["function getCampaign(uint256) view returns (tuple(address owne
 const ETH_MILESTONE_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 totalGoal,uint256 amountRaised,bool isActive,uint256 deadline,uint256 milestoneCount,uint256 currentMilestone))", "function campaignCount() view returns (uint256)"];
 const ETH_UNIFIED_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSD,uint256 amountRaisedETH,bool isActive,uint256 deadline,string solanaAddress))", "function campaignCount() view returns (uint256)"];
 
-export default function AllCampaigns({ solWallet }) {
+export default function AllCampaigns() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const { prices, formatUSD } = useCryptoPrices();
+  const { prices } = useCryptoPrices();
 
   useEffect(() => {
     async function loadAll() {

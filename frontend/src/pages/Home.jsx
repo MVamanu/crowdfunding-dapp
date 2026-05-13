@@ -20,7 +20,7 @@ export default function Home({ ethContract, solWallet }) {
   const [campaigns, setCampaigns] = useState(loadCampaignsFromCache());
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const { formatUSD, toUSD, prices } = useCryptoPrices();
+  const { toUSD } = useCryptoPrices();
   const totalUSD = campaigns.reduce((sum, c) => sum + parseFloat(toUSD(c.amountRaised, c.blockchain) || 0), 0);
   
 

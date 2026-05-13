@@ -76,7 +76,7 @@ export default function AllCampaignsV2() {
               );
               const tokenAccInfo = await connection.getTokenAccountBalance(vaultPDA);
               vaultBalance = Number(tokenAccInfo.value.amount);
-            } catch(e) {}
+            } catch {}
             all.push({
               id: `sol-${acc.publicKey.toString()}`,
               title: d.title,

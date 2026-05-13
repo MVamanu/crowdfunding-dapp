@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../components/ConnectWalletModal";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
 import "./MilestoneCampaignDetail.css";
-import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_RPC_URL } from "../config/chains";
 
 const CROSS_CONTRACT = CONTRACTS.crossMilestone;
 const CROSS_ABI = [
@@ -20,9 +20,7 @@ const CROSS_ABI = [
   "function finalizeMilestone(uint256,uint256)",
 ];
 const SEPOLIA_RPC = SEPOLIA_RPC_URL;
-const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
-
-export default function CrossMilestoneDetail({ ethConnected, ethAddress, ethContract, solWallet, solConnected, onConnectEth, onConnectSol, onConnectSolflare }) {
+export default function CrossMilestoneDetail({ ethConnected, ethAddress, solWallet, solConnected, onConnectEth, onConnectSol, onConnectSolflare }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { prices } = useCryptoPrices();

@@ -15,7 +15,7 @@ const SEPOLIA_RPC = SEPOLIA_RPC_URL;
 export default function UnifiedCampaigns() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { formatUSD, prices } = useCryptoPrices();
+  const { prices } = useCryptoPrices();
 
   useEffect(() => {
     async function load() {

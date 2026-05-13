@@ -5,7 +5,7 @@ import "./CampaignCard.css";
 
 export default function CampaignCard({ campaign }) {
   const { id, title, description, goal, amountRaised, isActive, blockchain, owner, deadline } = campaign;
-  const { formatUSD, toUSD, prices } = useCryptoPrices();
+  const { formatUSD } = useCryptoPrices();
   const progress = Math.min((Number(amountRaised) / Number(goal)) * 100, 100);
   const daysLeft = deadline ? Math.max(0, Math.ceil((new Date(deadline) - Date.now()) / 86400000)) : null;
   const isSol = blockchain === "sol";

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Connection, PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
+import { Connection, SystemProgram, Keypair } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import "./CreateCampaign.css";
 import { SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";

@@ -7,7 +7,6 @@ import "./V2.css";
 import "../CreateCampaign.css";
 
 const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
-const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
 const USDC_MINT_DEVNET = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
@@ -21,7 +20,7 @@ const CHAINS = [
   { id: "sol", name: "Solana", symbol: "SOL", color: "#9945FF", desc: "Devnet" },
 ];
 
-export default function CreateCampaignV2({ ethConnected, ethAddress, solWallet, solConnected }) {
+export default function CreateCampaignV2({ ethConnected, solWallet, solConnected }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
