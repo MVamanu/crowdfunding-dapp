@@ -27,6 +27,7 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [form, setForm] = useState({ title: "", description: "", duration: "" });
   const [mainChain, setMainChain] = useState("eth");
   const [acceptedChains, setAcceptedChains] = useState(["eth", "sol"]);
@@ -47,7 +48,15 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
     setMilestones(next);
   }
 
+  function selectMainChain(chainId) {
+    setMainChain(chainId);
+    if (!acceptedChains.includes(chainId)) {
+      setAcceptedChains([...acceptedChains, chainId]);
+    }
+  }
+
   function toggleChain(chainId) {
+    if (chainId === mainChain) return;
     if (acceptedChains.includes(chainId)) {
       if (acceptedChains.length > 1) {
         setAcceptedChains(acceptedChains.filter(chain => chain !== chainId));
@@ -63,6 +72,68 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
     }
   }
 
+  async function createOnEth(externalAddresses) {
+    const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;
+    const provider = new ethers.BrowserProvider(metamask);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(STABLE_MILESTONE_CONTRACT, STABLE_MILESTONE_ABI, signer);
+
+    const tx = await contract.createCampaign(
+      form.title,
+      form.description,
+      BigInt(form.duration),
+      mainChain,
+      acceptedChains,
+      externalAddresses,
+      milestones.map(milestone => milestone.title),
+      milestones.map(milestone => milestone.description),
+      milestones.map(milestone => toUsdcAmount(milestone.amount))
+    );
+    await tx.wait();
+  }
+
+  async function createOnSolana() {
+    const connection = new Connection(SOLANA_RPC_URL, "confirmed");
+    const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
+    anchor.setProvider(provider);
+    const idl = await anchor.Program.fetchIdl(SOLANA_PROGRAM_ID, provider);
+    if (!idl) throw new Error("Nu s-a putut obtine IDL-ul Solana.");
+    const program = new anchor.Program(idl, provider);
+    const createUsdcMilestoneCampaign = program.methods.createUsdcMilestoneCampaign;
+    if (!createUsdcMilestoneCampaign) {
+      throw new Error(
+        "IDL-ul Solana de pe devnet nu contine createUsdcMilestoneCampaign. Redeploy/upgrade programul si IDL-ul pentru a activa campaniile USDC milestone pe Solana."
+      );
+    }
+
+    const campaignKeypair = Keypair.generate();
+    const [vaultPDA] = PublicKey.findProgramAddressSync(
+      [textEncoder.encode("usdc_milestone_vault"), campaignKeypair.publicKey.toBuffer()],
+      SOLANA_PROGRAM_ID
+    );
+
+    await createUsdcMilestoneCampaign(
+        form.title,
+        form.description,
+        milestones.map(milestone => milestone.title),
+        milestones.map(milestone => milestone.description),
+        milestones.map(milestone => new anchor.BN(toUsdcAmount(milestone.amount).toString()))
+      )
+      .accounts({
+        usdcMilestoneCampaign: campaignKeypair.publicKey,
+        vault: vaultPDA,
+        usdcMint: USDC.solanaDevnetMint,
+        owner: solWallet.publicKey,
+        tokenProgram: SPL_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      })
+      .signers([campaignKeypair])
+      .rpc();
+
+    return campaignKeypair.publicKey.toString();
+  }
+
   function removeMilestone(index) {
     if (milestones.length > 2) {
       setMilestones(milestones.filter((_, i) => i !== index));
@@ -71,16 +142,17 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
 
   async function handleSubmit() {
     setError("");
+    setStatus("");
 
-    if (mainChain === "eth" && !STABLE_MILESTONE_CONTRACT) {
+    if (acceptedChains.includes("eth") && !STABLE_MILESTONE_CONTRACT) {
       setError("Contractul USDC milestone nu este configurat.");
       return;
     }
-    if (mainChain === "eth" && !ethConnected) {
+    if (acceptedChains.includes("eth") && !ethConnected) {
       setError("Conecteaza MetaMask pentru a crea campania.");
       return;
     }
-    if (mainChain === "sol" && (!solConnected || !solWallet)) {
+    if (acceptedChains.includes("sol") && (!solConnected || !solWallet)) {
       setError("Conecteaza Phantom sau Solflare pentru a crea campania pe Solana.");
       return;
     }
@@ -105,65 +177,20 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
 
     setLoading(true);
     try {
-      if (mainChain === "eth") {
-        const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;
-        const provider = new ethers.BrowserProvider(metamask);
-        const signer = await provider.getSigner();
-        const contract = new ethers.Contract(STABLE_MILESTONE_CONTRACT, STABLE_MILESTONE_ABI, signer);
-        const externalAddresses = acceptedChains.map(() => "");
+      let solanaCampaignId = "";
 
-        const tx = await contract.createCampaign(
-          form.title,
-          form.description,
-          BigInt(form.duration),
-          "eth",
-          acceptedChains,
-          externalAddresses,
-          milestones.map(milestone => milestone.title),
-          milestones.map(milestone => milestone.description),
-          milestones.map(milestone => toUsdcAmount(milestone.amount))
-        );
-        await tx.wait();
-      } else {
-        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
-        const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
-        anchor.setProvider(provider);
-        const idl = await anchor.Program.fetchIdl(SOLANA_PROGRAM_ID, provider);
-        if (!idl) throw new Error("Nu s-a putut obtine IDL-ul Solana.");
-        const program = new anchor.Program(idl, provider);
-        const createUsdcMilestoneCampaign = program.methods.createUsdcMilestoneCampaign;
-        if (!createUsdcMilestoneCampaign) {
-          throw new Error(
-            "IDL-ul Solana de pe devnet nu contine createUsdcMilestoneCampaign. Redeploy/upgrade programul si IDL-ul pentru a activa campaniile USDC milestone pe Solana."
-          );
-        }
-
-        const campaignKeypair = Keypair.generate();
-        const [vaultPDA] = PublicKey.findProgramAddressSync(
-          [textEncoder.encode("usdc_milestone_vault"), campaignKeypair.publicKey.toBuffer()],
-          SOLANA_PROGRAM_ID
-        );
-
-        await createUsdcMilestoneCampaign(
-            form.title,
-            form.description,
-            milestones.map(milestone => milestone.title),
-            milestones.map(milestone => milestone.description),
-            milestones.map(milestone => new anchor.BN(toUsdcAmount(milestone.amount).toString()))
-          )
-          .accounts({
-            usdcMilestoneCampaign: campaignKeypair.publicKey,
-            vault: vaultPDA,
-            usdcMint: USDC.solanaDevnetMint,
-            owner: solWallet.publicKey,
-            tokenProgram: SPL_TOKEN_PROGRAM_ID,
-            systemProgram: SystemProgram.programId,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          })
-          .signers([campaignKeypair])
-          .rpc();
+      if (acceptedChains.includes("sol")) {
+        setStatus(mainChain === "sol" ? "Creez campania principala pe Solana..." : "Creez mirror-ul Solana USDC...");
+        solanaCampaignId = await createOnSolana();
       }
-      navigate("/v2/kickstart");
+
+      if (acceptedChains.includes("eth")) {
+        setStatus(mainChain === "eth" ? "Creez campania principala pe Ethereum..." : "Creez mirror-ul Ethereum USDC...");
+        const externalAddresses = acceptedChains.map(chain => chain === "sol" ? solanaCampaignId : "");
+        await createOnEth(externalAddresses);
+      }
+
+      navigate(mainChain === "sol" && solanaCampaignId ? `/v2/kickstart/sol/${solanaCampaignId}` : "/v2/kickstart");
     } catch (e) {
       setError(e.reason || e.message || "Tranzactie esuata.");
     } finally {
@@ -208,7 +235,7 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
                     type="button"
                     className={mainChain === chain.id ? "chain-option selected" : "chain-option"}
                     style={{ borderColor: mainChain === chain.id ? chain.color : undefined }}
-                    onClick={() => setMainChain(chain.id)}
+                    onClick={() => selectMainChain(chain.id)}
                   >
                     <strong style={{ color: mainChain === chain.id ? chain.color : undefined }}>{chain.name}</strong>
                     <span>{mainChain === chain.id ? "principal" : "selecteaza"}</span>
@@ -275,6 +302,7 @@ export default function CreateKickstartV2({ ethConnected, solConnected, solWalle
             </div>
 
             {error && <div className="form-error">{error}</div>}
+            {status && <div className="form-success">{status}</div>}
             <button className="btn-usdc submit-btn" onClick={handleSubmit} disabled={loading}>
               {loading ? "Se proceseaza..." : `Lanseaza pe ${mainChain === "eth" ? "Ethereum" : "Solana"}`}
             </button>

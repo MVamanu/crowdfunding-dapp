@@ -190,7 +190,7 @@ export default function App() {
         <Route path="/v2/kickstart" element={<KickstartCampaignsV2 />} />
         <Route path="/v2/kickstart/create" element={<CreateKickstartV2 ethConnected={ethConnected} solConnected={solConnected} solWallet={solWallet} />} />
         <Route path="/v2/kickstart/sol/:id" element={<SolanaKickstartDetailV2 solWallet={solWallet} solConnected={solConnected} solAddress={solAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
-        <Route path="/v2/kickstart/:id" element={<KickstartDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
+        <Route path="/v2/kickstart/:id" element={<KickstartDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/v2/create" element={<CreateCampaignV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/v2/campaign/:blockchain/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/create" element={

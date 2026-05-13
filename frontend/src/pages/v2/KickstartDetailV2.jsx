@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ethers } from "ethers";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../../components/ConnectWalletModal";
 import "../CampaignDetail.css";
 import "./V2.css";
-import { CONTRACTS, SEPOLIA_RPC_URL, UNISWAP, USDC } from "../../config/chains";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL, SPL_TOKEN_PROGRAM_ID, UNISWAP, USDC } from "../../config/chains";
 import { getDaysLeft } from "../../utils/time";
+import { createAtaInstructionIfMissing } from "../../utils/solanaToken";
 
 const STABLE_MILESTONE_CONTRACT = CONTRACTS.stableMilestone;
 const USDC_ADDRESS = USDC.sepoliaAddress;
@@ -15,10 +18,12 @@ const WETH_ADDRESS = UNISWAP.sepoliaWeth;
 const WETH_USDC_FEE = UNISWAP.sepoliaWethUsdcFee;
 const SLIPPAGE_BPS = 500n;
 const BPS = 10_000n;
+const textEncoder = new TextEncoder();
 const STABLE_MILESTONE_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 totalGoal,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains,uint256 milestoneCount,uint256 currentMilestone))",
   "function getMilestone(uint256,uint256) view returns (tuple(string title,string description,uint256 amount,bool completed,bool approved,uint256 votesFor,uint256 votesAgainst,bool votingActive,uint256 votingDeadline))",
   "function getVotingPower(uint256,address) view returns (uint256)",
+  "function campaignChains(uint256,uint256) view returns (string chainName,string contractAddress,bool active)",
   "function donateLocal(uint256,uint256)",
   "function submitMilestone(uint256)",
   "function vote(uint256,uint256,bool)",
@@ -52,16 +57,18 @@ function addSlippage(amount) {
   return (amount * (BPS + SLIPPAGE_BPS)) / BPS;
 }
 
-export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectEth, onConnectSol, onConnectSolflare }) {
+export default function KickstartDetailV2({ ethConnected, ethAddress, solWallet, solConnected, onConnectEth, onConnectSol, onConnectSolflare }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState(null);
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState("");
+  const [solAmount, setSolAmount] = useState("");
   const [swapUsdcAmount, setSwapUsdcAmount] = useState("");
   const [quotedEth, setQuotedEth] = useState(0n);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [donateChain, setDonateChain] = useState("eth");
   const [donateMode, setDonateMode] = useState("usdc");
   const [external, setExternal] = useState({ donor: "", amount: "", chain: "sol" });
   const [allowance, setAllowance] = useState(0n);
@@ -72,6 +79,45 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
   const [votingPower, setVotingPower] = useState(0n);
   const [usdcBalance, setUsdcBalance] = useState(0n);
   const [ethBalance, setEthBalance] = useState(0n);
+  const [solUsdcBalance, setSolUsdcBalance] = useState(0n);
+
+  async function getSolanaProgram(wallet) {
+    const connection = new Connection(SOLANA_RPC_URL, "confirmed");
+    const w = wallet || {
+      publicKey: PublicKey.default,
+      signTransaction: async tx => tx,
+      signAllTransactions: async txs => txs,
+    };
+    const provider = new anchor.AnchorProvider(connection, w, { commitment: "confirmed" });
+    const idl = await anchor.Program.fetchIdl(SOLANA_PROGRAM_ID, provider);
+    if (!idl) throw new Error("Nu s-a putut obtine IDL-ul Solana.");
+    return { connection, program: new anchor.Program(idl, provider) };
+  }
+
+  function getProgramMethod(program, methodName) {
+    const method = program.methods[methodName];
+    if (!method) {
+      throw new Error(`IDL-ul Solana de pe devnet nu contine ${methodName}. Redeploy/upgrade IDL-ul pentru campaniile USDC milestone.`);
+    }
+    return method;
+  }
+
+  async function getSolanaVaultAmount(solanaCampaignId) {
+    try {
+      if (!solanaCampaignId) return 0n;
+      const { connection } = await getSolanaProgram(null);
+      const campaignPubkey = new PublicKey(solanaCampaignId);
+      const [vaultPDA] = PublicKey.findProgramAddressSync(
+        [textEncoder.encode("usdc_milestone_vault"), campaignPubkey.toBuffer()],
+        SOLANA_PROGRAM_ID
+      );
+      const balance = await connection.getTokenAccountBalance(vaultPDA);
+      return BigInt(balance.value.amount || "0");
+    } catch (e) {
+      console.error("Solana vault balance:", e);
+      return 0n;
+    }
+  }
 
   async function loadData() {
     setLoading(true);
@@ -85,6 +131,24 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
       const contract = new ethers.Contract(STABLE_MILESTONE_CONTRACT, STABLE_MILESTONE_ABI, provider);
       const rawCampaign = await contract.getCampaign(Number(id));
       const loadedMilestones = [];
+      const externalChains = [];
+
+      for (let i = 0; i < rawCampaign.acceptedChains.length; i++) {
+        try {
+          const chain = await contract.campaignChains(Number(id), i);
+          externalChains.push({
+            chainName: chain.chainName || chain[0],
+            contractAddress: chain.contractAddress || chain[1],
+            active: chain.active ?? chain[2],
+          });
+        } catch (e) {
+          console.error("External chain:", e);
+        }
+      }
+
+      const solanaMirror = externalChains.find(chain => chain.chainName === "sol" && chain.contractAddress);
+      const solanaMirrorId = solanaMirror?.contractAddress || "";
+      const liveSolanaAmount = await getSolanaVaultAmount(solanaMirrorId);
 
       for (let i = 0; i < Number(rawCampaign.milestoneCount); i++) {
         const milestone = await contract.getMilestone(Number(id), i);
@@ -113,18 +177,35 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
         setEthBalance(BigInt(nativeBalance));
       }
 
+      if (solWallet?.publicKey) {
+        try {
+          const { ata } = await createAtaInstructionIfMissing(
+            new Connection(SOLANA_RPC_URL, "confirmed"),
+            solWallet.publicKey,
+            solWallet.publicKey,
+            USDC.solanaDevnetMint
+          );
+          const balance = await new Connection(SOLANA_RPC_URL, "confirmed").getTokenAccountBalance(ata);
+          setSolUsdcBalance(BigInt(balance.value.amount || "0"));
+        } catch {
+          setSolUsdcBalance(0n);
+        }
+      }
+
       setCampaign({
         owner: rawCampaign.owner,
         title: rawCampaign.title,
         description: rawCampaign.description,
         totalGoal: rawCampaign.totalGoal,
         amountRaisedLocal: rawCampaign.amountRaisedLocal,
-        amountRaisedExternal: rawCampaign.amountRaisedExternal,
+        amountRaisedExternal: liveSolanaAmount > BigInt(rawCampaign.amountRaisedExternal) ? liveSolanaAmount : rawCampaign.amountRaisedExternal,
         isActive: rawCampaign.isActive,
         deadline: Number(rawCampaign.deadline),
         goalReached: rawCampaign.goalReached,
         mainChain: rawCampaign.mainChain,
         acceptedChains: rawCampaign.acceptedChains,
+        externalChains,
+        solanaMirrorId,
         milestoneCount: Number(rawCampaign.milestoneCount),
         currentMilestone: Number(rawCampaign.currentMilestone),
       });
@@ -140,7 +221,7 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
   useEffect(() => {
     queueMicrotask(() => loadData());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, ethAddress]);
+  }, [id, ethAddress, solWallet]);
 
   useEffect(() => {
     let cancelled = false;
@@ -204,6 +285,25 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
       await loadData();
     } catch (e) {
       setError(e.reason || e.message || "Tranzactie esuata.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runSolanaTx(action, successMessage) {
+    setError("");
+    setSuccess("");
+    if (!solWallet) {
+      setShowModal(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      await action();
+      setSuccess(successMessage);
+      await loadData();
+    } catch (e) {
+      setError(e.message || "Tranzactie Solana esuata.");
     } finally {
       setBusy(false);
     }
@@ -295,6 +395,55 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
       await donateTx.wait();
       setSwapUsdcAmount("");
     }, "ETH schimbat in USDC si donat.");
+  }
+
+  async function handleDonateSolUsdc() {
+    if (!solAmount || Number(solAmount) <= 0) {
+      setError("Introdu o suma USDC valida.");
+      return;
+    }
+    if (!campaign.solanaMirrorId) {
+      setError("Campania nu are mirror Solana configurat.");
+      return;
+    }
+    if (!campaign.isActive) {
+      setError("Campania este finalizata.");
+      return;
+    }
+
+    await runSolanaTx(async () => {
+      const { connection, program } = await getSolanaProgram(solWallet);
+      const campaignPubkey = new PublicKey(campaign.solanaMirrorId);
+      const [vaultPDA] = PublicKey.findProgramAddressSync(
+        [textEncoder.encode("usdc_milestone_vault"), campaignPubkey.toBuffer()],
+        SOLANA_PROGRAM_ID
+      );
+      const [donorPDA] = PublicKey.findProgramAddressSync(
+        [textEncoder.encode("donor_usdc_milestone"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer()],
+        SOLANA_PROGRAM_ID
+      );
+      const { ata: donorTokenAccount, instruction } = await createAtaInstructionIfMissing(
+        connection,
+        solWallet.publicKey,
+        solWallet.publicKey,
+        USDC.solanaDevnetMint
+      );
+
+      const builder = getProgramMethod(program, "donateUsdcMilestone")(new anchor.BN(toUsdcAmount(solAmount).toString()))
+        .accounts({
+          usdcMilestoneCampaign: campaignPubkey,
+          vault: vaultPDA,
+          donorTokenAccount,
+          donor: solWallet.publicKey,
+          donorUsdcMilestoneAccount: donorPDA,
+          tokenProgram: SPL_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        });
+
+      if (instruction) builder.preInstructions([instruction]);
+      await builder.rpc();
+      setSolAmount("");
+    }, "Donatie USDC pe Solana efectuata.");
   }
 
   async function handleSubmitMilestone() {
@@ -438,14 +587,37 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
               <p className="donate-helper">Mai sunt necesari ${remainingUsdc.toFixed(2)} USDC.</p>
               {campaign.goalReached && campaign.isActive && <div className="form-success">Goalul a fost atins. Donatiile suplimentare raman deschise pana la finalizarea campaniei.</div>}
               {!campaign.isActive && <div className="form-success">Campania este finalizata.</div>}
-              <p className="donate-helper">Balance wallet: ${formatUsdc(usdcBalance)} USDC.</p>
-              <p className="donate-helper">ETH wallet: {Number(ethers.formatEther(ethBalance)).toFixed(4)} ETH.</p>
-              <div className="donate-mode-tabs">
-                <button className={donateMode === "usdc" ? "filter-tab active" : "filter-tab"} onClick={() => setDonateMode("usdc")}>USDC</button>
-                <button className={donateMode === "eth" ? "filter-tab active" : "filter-tab"} onClick={() => setDonateMode("eth")}>ETH {"->"} USDC</button>
-              </div>
+              {campaign.acceptedChains.includes("sol") && (
+                <div className="donate-mode-tabs">
+                  <button className={donateChain === "eth" ? "filter-tab active" : "filter-tab"} onClick={() => setDonateChain("eth")}>Ethereum</button>
+                  <button className={donateChain === "sol" ? "filter-tab active" : "filter-tab"} onClick={() => setDonateChain("sol")}>Solana</button>
+                </div>
+              )}
+              {donateChain === "eth" && (
+                <>
+                  <p className="donate-helper">Balance wallet: ${formatUsdc(usdcBalance)} USDC.</p>
+                  <p className="donate-helper">ETH wallet: {Number(ethers.formatEther(ethBalance)).toFixed(4)} ETH.</p>
+                </>
+              )}
+              {donateChain === "sol" && (
+                <>
+                  <p className="donate-helper">Solana wallet: ${formatUsdc(solUsdcBalance)} USDC.</p>
+                  {campaign.solanaMirrorId ? (
+                    <p className="donate-helper">Mirror Solana: {campaign.solanaMirrorId.slice(0, 4)}...{campaign.solanaMirrorId.slice(-4)}</p>
+                  ) : (
+                    <div className="form-error">Mirror-ul Solana nu este configurat pentru aceasta campanie.</div>
+                  )}
+                </>
+              )}
 
-              {donateMode === "usdc" ? (
+              {donateChain === "eth" && (
+                <div className="donate-mode-tabs">
+                  <button className={donateMode === "usdc" ? "filter-tab active" : "filter-tab"} onClick={() => setDonateMode("usdc")}>USDC</button>
+                  <button className={donateMode === "eth" ? "filter-tab active" : "filter-tab"} onClick={() => setDonateMode("eth")}>ETH {"->"} USDC</button>
+                </div>
+              )}
+
+              {donateChain === "eth" && donateMode === "usdc" ? (
                 <>
                   <div className="donate-input-wrap">
                     <input className="form-input donate-input" type="number" step="1" min="0" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} />
@@ -463,7 +635,7 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
                   </button>
                   {insufficientUsdc && !donateAmountInvalid && <div className="form-error">Walletul conectat are doar ${formatUsdc(usdcBalance)} USDC.</div>}
                 </>
-              ) : (
+              ) : donateChain === "eth" ? (
                 <>
                   <div className="donate-input-wrap">
                     <input className="form-input donate-input" type="number" step="1" min="0" placeholder="2.00" value={swapUsdcAmount} onChange={e => setSwapUsdcAmount(e.target.value)} />
@@ -484,6 +656,26 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
                   </button>
                   <p className="donate-helper">Swap exact-output prin Uniswap Sepolia: tu alegi USDC, aplicatia calculeaza ETH-ul necesar.</p>
                   {insufficientEth && !swapUsdcInvalid && <div className="form-error">Pastreaza ETH pentru gas.</div>}
+                </>
+              ) : (
+                <>
+                  <div className="donate-input-wrap">
+                    <input className="form-input donate-input" type="number" step="1" min="0" placeholder="0" value={solAmount} onChange={e => setSolAmount(e.target.value)} />
+                    <span className="donate-currency">USDC</span>
+                  </div>
+                  <div className="donate-presets">
+                    {[1, 2, remainingUsdc].filter(value => value > 0).map((value, index) => (
+                      <button key={`${value}-${index}`} className="preset-btn" onClick={() => setSolAmount(value.toFixed(2))}>
+                        ${value.toFixed(2)}
+                      </button>
+                    ))}
+                  </div>
+                  <button className="btn-usdc donate-btn" style={{ width: "100%", justifyContent: "center" }} onClick={handleDonateSolUsdc} disabled={busy || !campaign.isActive || !campaign.solanaMirrorId || !solAmount || Number(solAmount) <= 0 || toUsdcAmount(solAmount) > solUsdcBalance}>
+                    {busy ? "Se proceseaza..." : !campaign.isActive ? "Campanie finalizata" : !solConnected ? "Conecteaza wallet Solana" : !campaign.solanaMirrorId ? "Mirror Solana lipsa" : !solAmount || Number(solAmount) <= 0 ? "Introdu suma USDC" : toUsdcAmount(solAmount) > solUsdcBalance ? "USDC insuficient" : "Doneaza USDC pe Solana"}
+                  </button>
+                  <p className="donate-helper">Donatia intra direct in vault-ul USDC Solana al mirror-ului.</p>
+                  {toUsdcAmount(solAmount || "0") > solUsdcBalance && <div className="form-error">Walletul Solana are doar ${formatUsdc(solUsdcBalance)} USDC.</div>}
+                  {campaign.solanaMirrorId && <div className="form-success">Suma din vault-ul Solana este inclusa live in progresul afisat.</div>}
                 </>
               )}
               {error && <div className="form-error">{error}</div>}
