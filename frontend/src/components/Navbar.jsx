@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useVersion } from "../context/version";
 import "./Navbar.css";
@@ -6,6 +7,13 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
   const location = useLocation();
   const { version, switchVersion } = useVersion();
   const navigate = useNavigate();
+  const routeVersion = location.pathname.startsWith("/v2") ? "v2" : "v1";
+
+  useEffect(() => {
+    if (version !== routeVersion) {
+      switchVersion(routeVersion);
+    }
+  }, [routeVersion, switchVersion, version]);
 
   function handleVersionSwitch(v) {
     switchVersion(v);
@@ -14,8 +22,11 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
   }
 
   const isActive = (paths) => paths.some(p => location.pathname === p || location.pathname.startsWith(p));
-  const campaignsPath = version === "v2" ? "/v2" : "/";
-  const kickstartPath = version === "v2" ? "/v2/kickstart" : "/kickstart";
+  const campaignsPath = routeVersion === "v2" ? "/v2" : "/";
+  const kickstartPath = routeVersion === "v2" ? "/v2/kickstart" : "/kickstart";
+  const isCampaignsActive = routeVersion === "v2"
+    ? location.pathname === "/v2" || location.pathname.startsWith("/v2/campaign")
+    : location.pathname === "/" || location.pathname.startsWith("/campaign/");
 
   return (
     <nav className="navbar">
@@ -31,7 +42,7 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
         </Link>
 
         <div className="navbar-links">
-          <Link to={campaignsPath} className={(version === "v2" ? location.pathname === "/v2" : isActive(["/"]) && !location.pathname.includes("v2")) ? "nav-link active" : "nav-link"}>
+          <Link to={campaignsPath} className={isCampaignsActive ? "nav-link active" : "nav-link"}>
             Campanii
           </Link>
           <Link to="/ong" className={isActive(["/ong", "/create-ong"]) ? "nav-link active" : "nav-link"}>
@@ -44,14 +55,14 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
 
         <div className="version-switcher">
           <button
-            className={version === "v1" ? "version-btn active" : "version-btn"}
+            className={routeVersion === "v1" ? "version-btn active" : "version-btn"}
             onClick={() => handleVersionSwitch("v1")}
             title="ETH / SOL - Campanii native crypto"
           >
             v1 <span className="version-label">ETH/SOL</span>
           </button>
           <button
-            className={version === "v2" ? "version-btn active v2" : "version-btn v2"}
+            className={routeVersion === "v2" ? "version-btn active v2" : "version-btn v2"}
             onClick={() => handleVersionSwitch("v2")}
             title="USDC - Campanii in stablecoin"
           >

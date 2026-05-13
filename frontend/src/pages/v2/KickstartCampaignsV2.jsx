@@ -81,33 +81,38 @@ export default function KickstartCampaignsV2() {
           const idl = await anchor.Program.fetchIdl(SOLANA_PROGRAM_ID, provider);
           if (idl) {
             const program = new anchor.Program(idl, provider);
-            const accounts = await program.account.usdcMilestoneCampaign.all();
-            for (const account of accounts) {
-              const campaign = account.account;
-              const milestoneCount = Number(campaign.milestoneCount);
-              const currentMilestone = Number(campaign.currentMilestone);
-              const activeMilestone =
-                milestoneCount > 0 && currentMilestone < milestoneCount
-                  ? campaign.milestones[currentMilestone]
-                  : null;
+            const usdcMilestoneAccount = program.account.usdcMilestoneCampaign;
+            if (!usdcMilestoneAccount) {
+              console.warn("Solana USDC milestone account is not available in the deployed IDL.");
+            } else {
+              const accounts = await usdcMilestoneAccount.all();
+              for (const account of accounts) {
+                const campaign = account.account;
+                const milestoneCount = Number(campaign.milestoneCount);
+                const currentMilestone = Number(campaign.currentMilestone);
+                const activeMilestone =
+                  milestoneCount > 0 && currentMilestone < milestoneCount
+                    ? campaign.milestones[currentMilestone]
+                    : null;
 
-              loaded.push({
-                id: account.publicKey.toString(),
-                owner: campaign.owner.toString(),
-                title: campaign.title,
-                description: campaign.description,
-                goal: Number(campaign.totalGoal),
-                amountRaised: Number(campaign.amountRaised),
-                amountRaisedLocal: Number(campaign.amountRaised),
-                amountRaisedExternal: 0,
-                isActive: campaign.isActive,
-                goalReached: campaign.goalReached,
-                acceptedChains: ["sol"],
-                milestoneCount,
-                currentMilestone,
-                activeMilestone,
-                route: `/v2/kickstart/sol/${account.publicKey.toString()}`,
-              });
+                loaded.push({
+                  id: account.publicKey.toString(),
+                  owner: campaign.owner.toString(),
+                  title: campaign.title,
+                  description: campaign.description,
+                  goal: Number(campaign.totalGoal),
+                  amountRaised: Number(campaign.amountRaised),
+                  amountRaisedLocal: Number(campaign.amountRaised),
+                  amountRaisedExternal: 0,
+                  isActive: campaign.isActive,
+                  goalReached: campaign.goalReached,
+                  acceptedChains: ["sol"],
+                  milestoneCount,
+                  currentMilestone,
+                  activeMilestone,
+                  route: `/v2/kickstart/sol/${account.publicKey.toString()}`,
+                });
+              }
             }
           }
         } catch (error) {
