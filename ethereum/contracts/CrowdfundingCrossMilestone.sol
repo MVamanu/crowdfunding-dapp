@@ -86,7 +86,9 @@ contract CrowdfundingCrossMilestone {
     ) external returns (uint256) {
         require(_milestoneTitles.length >= 2, "Minim 2 milestone-uri");
         require(_milestoneTitles.length == _milestoneAmountsUSD.length, "Date invalide");
+        require(_milestoneTitles.length == _milestoneDescriptions.length, "Date invalide");
         require(_goalUSD > 0, "Goal invalid");
+        require(_durationDays > 0, "Durata trebuie sa fie pozitiva");
 
         uint256 id = campaignCount++;
         campaigns[id] = Campaign({
@@ -128,6 +130,7 @@ contract CrowdfundingCrossMilestone {
     function donateETH(uint256 _id) external payable campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
+        require(block.timestamp < campaign.deadline, "Campania a expirat");
         require(msg.value > 0, "Donatie invalida");
 
         donations[_id][msg.sender] += msg.value;
@@ -190,7 +193,11 @@ contract CrowdfundingCrossMilestone {
     /// @dev Pattern checks-effects-interactions respectat
     /// @param _id ID-ul campaniei
     /// @param _milestoneId Indexul milestone-ului
-    function finalizeMilestone(uint256 _id, uint256 _milestoneId) external campaignExists(_id) {
+    function finalizeMilestone(uint256 _id, uint256 _milestoneId) external campaignExists(_id) onlyOwner(_id) {
+        Campaign storage campaign = campaigns[_id];
+        require(_milestoneId < campaign.milestoneCount, "Milestone invalid");
+        require(_milestoneId == campaign.currentMilestone, "Milestone invalid");
+
         Milestone storage milestone = milestones[_id][_milestoneId];
         require(milestone.votingActive, "Votul nu este activ");
 
@@ -200,17 +207,17 @@ contract CrowdfundingCrossMilestone {
         if (milestone.votesFor > milestone.votesAgainst) {
             milestone.completed = true;
             milestone.approved = true;
-            campaigns[_id].currentMilestone++;
+            campaign.currentMilestone++;
 
-            if (campaigns[_id].amountRaisedETH > 0) {
-                uint256 share = campaigns[_id].amountRaisedETH / campaigns[_id].milestoneCount;
+            if (campaign.amountRaisedETH > 0) {
+                uint256 share = campaign.amountRaisedETH / campaign.milestoneCount;
 
-                if (campaigns[_id].currentMilestone >= campaigns[_id].milestoneCount) {
-                    campaigns[_id].isActive = false;
+                if (campaign.currentMilestone >= campaign.milestoneCount) {
+                    campaign.isActive = false;
                 }
 
                 // INTERACTIONS
-                (bool success, ) = payable(campaigns[_id].owner).call{value: share}("");
+                (bool success, ) = payable(campaign.owner).call{value: share}("");
                 require(success, "Transfer esuat");
             }
 

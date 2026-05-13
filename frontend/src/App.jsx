@@ -23,10 +23,14 @@ import { VersionProvider } from "./context/VersionContext";
 import AllCampaignsV2 from "./pages/v2/AllCampaignsV2";
 import CreateCampaignV2 from "./pages/v2/CreateCampaignV2";
 import CampaignDetailV2 from "./pages/v2/CampaignDetailV2";
-import CreateSolanaUsdcCampaign from "./pages/v2/CreateSolanaUsdcCampaign";
+import KickstartCampaignsV2 from "./pages/v2/KickstartCampaignsV2";
+import CreateKickstartV2 from "./pages/v2/CreateKickstartV2";
+import KickstartDetailV2 from "./pages/v2/KickstartDetailV2";
+import SolanaKickstartDetailV2 from "./pages/v2/SolanaKickstartDetailV2";
 import "./index.css";
+import { CONTRACTS } from "./config/chains";
 
-const ETH_CONTRACT_ADDRESS = "0x53EF55468DF1570952b7A07eF46926c3837e5770";
+const ETH_CONTRACT_ADDRESS = CONTRACTS.eth;
 const ETH_ABI = [
   "function createCampaign(string,string,uint256,uint256) returns (uint256)",
   "function donate(uint256) payable",
@@ -183,6 +187,10 @@ export default function App() {
         <Route path="/create-cross-milestone" element={<CreateCrossMilestone ethConnected={ethConnected} solAddress={solAddress} />} />
         <Route path="/cross-milestone/:id" element={<CrossMilestoneDetail {...commonProps} />} />
         <Route path="/v2" element={<AllCampaignsV2 />} />
+        <Route path="/v2/kickstart" element={<KickstartCampaignsV2 />} />
+        <Route path="/v2/kickstart/create" element={<CreateKickstartV2 ethConnected={ethConnected} solConnected={solConnected} solWallet={solWallet} />} />
+        <Route path="/v2/kickstart/sol/:id" element={<SolanaKickstartDetailV2 solWallet={solWallet} solConnected={solConnected} solAddress={solAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
+        <Route path="/v2/kickstart/:id" element={<KickstartDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/v2/create" element={<CreateCampaignV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/v2/campaign/:blockchain/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/create" element={

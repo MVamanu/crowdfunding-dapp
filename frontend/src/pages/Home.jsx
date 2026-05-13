@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import CampaignCard from "../components/CampaignCard";
 import { saveCampaignsToCache, loadCampaignsFromCache } from "../utils/campaignCache";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
 import "./Home.css";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const ETH_CONTRACT_ADDRESS = "0x53EF55468DF1570952b7A07eF46926c3837e5770";
+const ETH_CONTRACT_ADDRESS = CONTRACTS.eth;
 const ETH_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goal,uint256 amountRaised,bool isActive,uint256 deadline))",
   "function campaignCount() view returns (uint256)",
 ];
-const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SEPOLIA_RPC = SEPOLIA_RPC_URL;
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
 
 export default function Home({ ethContract, solWallet }) {
   const [campaigns, setCampaigns] = useState(loadCampaignsFromCache());
@@ -47,7 +48,7 @@ export default function Home({ ethContract, solWallet }) {
       } catch (e) { console.error("ETH load error:", e); }
 
       try {
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
         const dummyWallet = {
           publicKey: PublicKey.default,
           signTransaction: async t => t,
@@ -140,7 +141,7 @@ export default function Home({ ethContract, solWallet }) {
             </div>
           ) : filtered.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡</div>
+              <div className="empty-icon">EMPTY</div>
               <h3>No campaigns yet</h3>
               <p>Connect your wallet and create the first campaign.</p>
             </div>

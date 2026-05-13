@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
-
-const CROSS_CONTRACT = "0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E";
-const CROSS_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSD,uint256 amountRaisedETH,uint256 amountRaisedSOLusd,bool isActive,uint256 deadline,string solanaAddress,uint256 milestoneCount,uint256 currentMilestone,string primaryChain))", "function campaignCount() view returns (uint256)"];
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
 import "./AllCampaigns.css";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const ETH_MILESTONE_ADDRESS = "0x50B8de29C8226a85c99b9679060A30a180277a1E";
-const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const CROSS_CONTRACT = CONTRACTS.crossMilestone;
+const CROSS_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSD,uint256 amountRaisedETH,uint256 amountRaisedSOLusd,bool isActive,uint256 deadline,string solanaAddress,uint256 milestoneCount,uint256 currentMilestone,string primaryChain))", "function campaignCount() view returns (uint256)"];
+const ETH_MILESTONE_ADDRESS = CONTRACTS.milestone;
+const SEPOLIA_RPC = SEPOLIA_RPC_URL;
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
 const ETH_MILESTONE_ABI = ["function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 totalGoal,uint256 amountRaised,bool isActive,uint256 deadline,uint256 milestoneCount,uint256 currentMilestone))", "function campaignCount() view returns (uint256)"];
 
 export default function KickstartCampaigns() {
@@ -56,7 +56,7 @@ export default function KickstartCampaigns() {
       } catch (e) { console.error(e); }
 
       try {
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
         const dummyWallet = { publicKey: PublicKey.default, signTransaction: async t => t, signAllTransactions: async t => t };
         const prov = new anchor.AnchorProvider(connection, dummyWallet, { commitment: "confirmed" });
         anchor.setProvider(prov);
@@ -87,7 +87,7 @@ export default function KickstartCampaigns() {
       <section className="hero">
         <div className="container">
           <div className="hero-content">
-            <div className="hero-label">Kickstart â€” Milestone Funding</div>
+            <div className="hero-label">Kickstart - Milestone Funding</div>
             <h1 className="hero-title">Lanseaza Proiectul Tau<br/>cu Incredere.</h1>
             <div className="divider"></div>
             <p className="hero-desc">Campanii cu finantare etapizata. Fondurile sunt eliberate doar dupa aprobarea prin vot a fiecarei etape.</p>
@@ -117,7 +117,7 @@ export default function KickstartCampaigns() {
             <div className="loading-state"><div className="loading-spinner"></div><p>Se incarca...</p></div>
           ) : campaigns.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-icon">â—‡</div>
+              <div className="empty-icon">EMPTY</div>
               <h3>Niciun proiect Kickstart</h3>
               <p>Fii primul care lanseaza un proiect cu milestone-uri.</p>
               <div style={{display:"flex", gap:"12px", justifyContent:"center", marginTop:"24px"}}>

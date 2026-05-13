@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Connection, PublicKey, clusterApiUrl, SystemProgram } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../components/ConnectWalletModal";
 import "./MilestoneCampaignDetail.css";
+import { SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
+const textEncoder = new TextEncoder();
 
 export default function SolanaMilestoneCampaignDetail({ solWallet, solConnected, solAddress, onConnectEth, onConnectSol, onConnectSolflare }) {
   const { id } = useParams();
@@ -21,7 +23,7 @@ export default function SolanaMilestoneCampaignDetail({ solWallet, solConnected,
   const [showModal, setShowModal] = useState(false);
 
   async function getProgram(wallet) {
-    const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+    const connection = new Connection(SOLANA_RPC_URL, "confirmed");
     const w = wallet || { publicKey: PublicKey.default, signTransaction: async t => t, signAllTransactions: async t => t };
     const provider = new anchor.AnchorProvider(connection, w, { commitment: "confirmed" });
     anchor.setProvider(provider);
@@ -62,7 +64,7 @@ export default function SolanaMilestoneCampaignDetail({ solWallet, solConnected,
       const campaignPubkey = new PublicKey(id);
       const lamports = new anchor.BN(parseFloat(amount) * 1e9);
       const [donorPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from("donor"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer()],
+        [textEncoder.encode("donor"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer()],
         SOL_PROGRAM_ID
       );
       await program.methods.donateMilestone(lamports)
@@ -102,11 +104,11 @@ export default function SolanaMilestoneCampaignDetail({ solWallet, solConnected,
       const program = await getProgram(solWallet);
       const campaignPubkey = new PublicKey(id);
       const [donorPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from("donor"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer()],
+        [textEncoder.encode("donor"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer()],
         SOL_PROGRAM_ID
       );
       const [votePDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vote"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer(), Buffer.from([milestoneIdx])],
+        [textEncoder.encode("vote"), campaignPubkey.toBuffer(), solWallet.publicKey.toBuffer(), Uint8Array.of(milestoneIdx)],
         SOL_PROGRAM_ID
       );
       await program.methods.voteMilestone(milestoneIdx, approve)

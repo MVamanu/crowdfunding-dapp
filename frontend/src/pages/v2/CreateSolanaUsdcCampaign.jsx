@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Connection, PublicKey, clusterApiUrl, SystemProgram, Keypair } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import "./V2.css";
 import "../CreateCampaign.css";
+import {
+  SOLANA_PROGRAM_ID,
+  SOLANA_RPC_URL,
+  SPL_TOKEN_PROGRAM_ID,
+  USDC,
+} from "../../config/chains";
 
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
-const USDC_MINT_DEVNET = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
+const USDC_MINT_DEVNET = USDC.solanaDevnetMint;
+const textEncoder = new TextEncoder();
 
 export default function CreateSolanaUsdcCampaign({ solWallet, solConnected }) {
   const navigate = useNavigate();
@@ -26,7 +33,7 @@ export default function CreateSolanaUsdcCampaign({ solWallet, solConnected }) {
 
     setLoading(true);
     try {
-      const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+      const connection = new Connection(SOLANA_RPC_URL, "confirmed");
       const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
       anchor.setProvider(provider);
 
@@ -41,7 +48,7 @@ export default function CreateSolanaUsdcCampaign({ solWallet, solConnected }) {
 
       // Gasim vault PDA
       const [vaultPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from("vault"), campaignKeypair.publicKey.toBuffer()],
+        [textEncoder.encode("vault"), campaignKeypair.publicKey.toBuffer()],
         SOL_PROGRAM_ID
       );
 
@@ -52,7 +59,7 @@ export default function CreateSolanaUsdcCampaign({ solWallet, solConnected }) {
           vault: vaultPDA,
           usdcMint: USDC_MINT_DEVNET,
           owner: solWallet.publicKey,
-          tokenProgram: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+          tokenProgram: SPL_TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
         })
@@ -70,7 +77,7 @@ export default function CreateSolanaUsdcCampaign({ solWallet, solConnected }) {
     <div className="create-page">
       <div className="container">
         <div className="create-header">
-          <div className="v2-badge">v2 — USDC pe Solana</div>
+          <div className="v2-badge">v2 - USDC pe Solana</div>
           <h1 className="create-title">Campanie USDC pe Solana</h1>
           <div className="divider"></div>
           <p className="create-desc">Accepta donatii in USDC pe Solana Devnet. Valoare stabila, tranzactii rapide si ieftine.</p>
@@ -79,8 +86,8 @@ export default function CreateSolanaUsdcCampaign({ solWallet, solConnected }) {
         <div className="create-layout">
           <div className="create-form card">
             <div className="usdc-note">
-              <span>💡</span>
-              <span>USDC pe Solana — tranzactii sub 1 secunda, costuri de fracțiuni de cent.</span>
+              <span>Info</span>
+              <span>USDC pe Solana - tranzactii sub 1 secunda, costuri de fractiuni de cent.</span>
             </div>
 
             <div className="form-section">
@@ -135,7 +142,7 @@ export default function CreateSolanaUsdcCampaign({ solWallet, solConnected }) {
                 {[
                   ["01", "USDC Stabil", "1 USDC = $1 USD intotdeauna pe ambele blockchain-uri."],
                   ["02", "Solana Speed", "Confirmare in mai putin de 1 secunda."],
-                  ["03", "Cost minim", "Costuri de fracțiuni de cent per tranzactie."],
+                  ["03", "Cost minim", "Costuri de fractiuni de cent per tranzactie."],
                   ["04", "Cross-chain", "Campania ta apare alaturi de campaniile ETH USDC."],
                 ].map(([n, t, d]) => (
                   <div key={n} className="info-step">

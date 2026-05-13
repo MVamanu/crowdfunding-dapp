@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 import { ethers } from "ethers";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
 import "./UnifiedCampaigns.css";
+import { CONTRACTS, SEPOLIA_RPC_URL } from "../config/chains";
 
-const UNIFIED_CONTRACT = "0x4C6b83E06c9B7f83a029312eA9E3E00E7CBC6a5e";
+const UNIFIED_CONTRACT = CONTRACTS.unified;
 const UNIFIED_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSD,uint256 amountRaisedETH,bool isActive,uint256 deadline,string solanaAddress))",
   "function campaignCount() view returns (uint256)",
 ];
-const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
+const SEPOLIA_RPC = SEPOLIA_RPC_URL;
 
 export default function UnifiedCampaigns() {
   const [campaigns, setCampaigns] = useState([]);

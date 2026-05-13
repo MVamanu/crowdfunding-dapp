@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import "./CreateMilestoneCampaign.css";
+import { CONTRACTS } from "../config/chains";
 
-const MILESTONE_CONTRACT = "0x50B8de29C8226a85c99b9679060A30a180277a1E";
+const MILESTONE_CONTRACT = CONTRACTS.milestone;
 const MILESTONE_ABI = [
   "function createCampaign(string,string,uint256,string[],string[],uint256[]) returns (uint256)",
   "function campaignCount() view returns (uint256)",
@@ -77,7 +78,7 @@ export default function CreateMilestoneCampaign({ ethContract, ethConnected }) {
     <div className="create-page">
       <div className="container">
         <div className="create-header">
-          <div className="create-label">Inovatie â€” Milestone Funding</div>
+          <div className="create-label">Inovatie - Milestone Funding</div>
           <h1 className="create-title">Campanie cu Milestone-uri</h1>
           <div className="divider"></div>
           <p className="create-desc">Fondurile sunt eliberate treptat, pe masura ce fiecare etapa este aprobata prin vot de catre donatori.</p>
@@ -114,7 +115,7 @@ export default function CreateMilestoneCampaign({ ethContract, ethConnected }) {
                   <div className="milestone-header">
                     <span className="milestone-num">Etapa {i + 1}</span>
                     {milestones.length > 2 && (
-                      <button className="remove-milestone-btn" onClick={() => removeMilestone(i)}>âœ•</button>
+                      <button className="remove-milestone-btn" onClick={() => removeMilestone(i)}>X</button>
                     )}
                   </div>
                   <div className="form-row">

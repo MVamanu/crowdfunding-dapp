@@ -6,7 +6,7 @@
 
 [![Ethereum](https://img.shields.io/badge/Ethereum-Sepolia-627EEA?logo=ethereum)](https://sepolia.etherscan.io)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF?logo=solana)](https://explorer.solana.com/?cluster=devnet)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?logo=solidity)](https://soliditylang.org)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
@@ -78,9 +78,9 @@
 - Feature `init-if-needed` pentru conturi existente
 
 ### Frontend
-- **React** 18 + **Vite** — interfață utilizator
+- **React** 19 + **Vite** — interfață utilizator
 - **ethers.js** v6 — interacțiune cu Ethereum
-- **@coral-xyz/anchor** — interacțiune cu Solana
+- **@coral-xyz/anchor** 0.32.x în frontend / 0.31.1 pentru programul Anchor — interacțiune cu Solana
 - **CoinGecko API** — prețuri ETH/SOL în timp real
 
 ---
@@ -129,6 +129,7 @@ anchor deploy --provider.cluster devnet
 ```bash
 cd frontend
 npm install
+copy .env.example .env
 npm run dev
 ```
 

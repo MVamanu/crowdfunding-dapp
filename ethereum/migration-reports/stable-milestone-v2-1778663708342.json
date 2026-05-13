@@ -1,0 +1,49 @@
+{
+  "dryRun": true,
+  "oldContract": "0x27d85EEB926AE080b41e77B69263190D9d5eB8F3",
+  "newContract": "0xB0c5218ef966c6EBfEedE21909595cC327267998",
+  "oldCount": 1,
+  "newCountBefore": 0,
+  "migrated": [
+    {
+      "oldId": 0,
+      "owner": "0xb50dA909D4BFEfd196d381b330eAfBE13Fd79291",
+      "title": "Test eth/USDC",
+      "description": "testare eth",
+      "durationDays": "29",
+      "mainChain": "eth",
+      "acceptedChains": [
+        "sol",
+        "eth"
+      ],
+      "externalAddresses": [
+        "",
+        ""
+      ],
+      "milestoneTitles": [
+        "test1",
+        "test2"
+      ],
+      "milestoneDescriptions": [
+        "test",
+        "test2"
+      ],
+      "milestoneAmounts": [
+        "1000000",
+        "1000000"
+      ],
+      "oldTotals": {
+        "totalGoal": "2000000",
+        "amountRaisedLocal": "2000000",
+        "amountRaisedExternal": "0",
+        "isActive": true,
+        "goalReached": true,
+        "currentMilestone": "0"
+      },
+      "newId": null,
+      "txHash": null
+    }
+  ],
+  "skipped": [],
+  "newCountAfter": 0
+}

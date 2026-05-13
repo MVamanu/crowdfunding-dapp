@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import { Connection, PublicKey, clusterApiUrl, SystemProgram } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../components/ConnectWalletModal";
 import { useCryptoPrices } from "../hooks/useCryptoPrices";
 import "./MilestoneCampaignDetail.css";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const CROSS_CONTRACT = "0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E";
+const CROSS_CONTRACT = CONTRACTS.crossMilestone;
 const CROSS_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSD,uint256 amountRaisedETH,uint256 amountRaisedSOLusd,bool isActive,uint256 deadline,string solanaAddress,uint256 milestoneCount,uint256 currentMilestone,string primaryChain))",
   "function getMilestone(uint256,uint256) view returns (tuple(string title,string description,uint256 amountUSD,bool completed,bool approved,uint256 votesFor,uint256 votesAgainst,uint256 votingDeadline,bool votingActive))",
@@ -18,8 +19,8 @@ const CROSS_ABI = [
   "function vote(uint256,uint256,bool)",
   "function finalizeMilestone(uint256,uint256)",
 ];
-const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SEPOLIA_RPC = SEPOLIA_RPC_URL;
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
 
 export default function CrossMilestoneDetail({ ethConnected, ethAddress, ethContract, solWallet, solConnected, onConnectEth, onConnectSol, onConnectSolflare }) {
   const { id } = useParams();
@@ -102,10 +103,10 @@ export default function CrossMilestoneDetail({ ethConnected, ethAddress, ethCont
       if (!campaign.solanaAddress) { setError("Aceasta campanie nu accepta donatii SOL."); return; }
       setDonating(true);
       try {
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
         const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
         anchor.setProvider(provider);
-        const connection2 = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection2 = new Connection(SOLANA_RPC_URL, "confirmed");
         const ownerPubkey = new PublicKey(campaign.solanaAddress);
         const lamports = Math.round(parseFloat(amount) * 1e9);
 

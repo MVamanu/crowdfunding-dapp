@@ -75,6 +75,8 @@ contract CrowdfundingMilestone {
     ) external returns (uint256) {
         require(_milestoneTitles.length >= 2, "Minim 2 milestone-uri");
         require(_milestoneTitles.length == _milestoneAmounts.length, "Date invalide");
+        require(_milestoneTitles.length == _milestoneDescriptions.length, "Date invalide");
+        require(_durationDays > 0, "Durata trebuie sa fie pozitiva");
 
         uint256 totalGoal = 0;
         for (uint256 i = 0; i < _milestoneAmounts.length; i++) {
@@ -118,6 +120,7 @@ contract CrowdfundingMilestone {
     function donate(uint256 _id) external payable campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
         require(campaign.isActive, "Campania nu este activa");
+        require(block.timestamp < campaign.deadline, "Campania a expirat");
         require(msg.value > 0, "Donatie invalida");
 
         donations[_id][msg.sender] += msg.value;
@@ -175,7 +178,11 @@ contract CrowdfundingMilestone {
     /// @dev Pattern checks-effects-interactions respectat
     /// @param _id ID-ul campaniei
     /// @param _milestoneId Indexul milestone-ului de finalizat
-    function finalizeMilestone(uint256 _id, uint256 _milestoneId) external campaignExists(_id) {
+    function finalizeMilestone(uint256 _id, uint256 _milestoneId) external campaignExists(_id) onlyOwner(_id) {
+        Campaign storage campaign = campaigns[_id];
+        require(_milestoneId < campaign.milestoneCount, "Milestone invalid");
+        require(_milestoneId == campaign.currentMilestone, "Milestone invalid");
+
         Milestone storage milestone = milestones[_id][_milestoneId];
         require(milestone.votingActive, "Votul nu este activ");
 
@@ -185,13 +192,13 @@ contract CrowdfundingMilestone {
         if (milestone.votesFor > milestone.votesAgainst) {
             milestone.completed = true;
             milestone.approved = true;
-            campaigns[_id].currentMilestone++;
+            campaign.currentMilestone++;
 
             uint256 amount = milestone.amount;
-            address owner = campaigns[_id].owner;
+            address owner = campaign.owner;
 
-            if (campaigns[_id].currentMilestone >= campaigns[_id].milestoneCount) {
-                campaigns[_id].isActive = false;
+            if (campaign.currentMilestone >= campaign.milestoneCount) {
+                campaign.isActive = false;
             }
 
             // INTERACTIONS: transfer dupa actualizarea state-ului

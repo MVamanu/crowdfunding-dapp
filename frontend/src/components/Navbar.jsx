@@ -14,6 +14,8 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
   }
 
   const isActive = (paths) => paths.some(p => location.pathname === p || location.pathname.startsWith(p));
+  const campaignsPath = version === "v2" ? "/v2" : "/";
+  const kickstartPath = version === "v2" ? "/v2/kickstart" : "/kickstart";
 
   return (
     <nav className="navbar">
@@ -29,13 +31,13 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
         </Link>
 
         <div className="navbar-links">
-          <Link to="/" className={isActive(["/"]) && !location.pathname.includes("v2") ? "nav-link active" : "nav-link"}>
+          <Link to={campaignsPath} className={(version === "v2" ? location.pathname === "/v2" : isActive(["/"]) && !location.pathname.includes("v2")) ? "nav-link active" : "nav-link"}>
             Campanii
           </Link>
           <Link to="/ong" className={isActive(["/ong", "/create-ong"]) ? "nav-link active" : "nav-link"}>
             ONG / Fundatii
           </Link>
-          <Link to="/kickstart" className={isActive(["/kickstart", "/create-kickstart", "/milestone", "/solana-milestone"]) ? "nav-link active" : "nav-link"}>
+          <Link to={kickstartPath} className={isActive(["/kickstart", "/v2/kickstart", "/create-kickstart", "/milestone", "/solana-milestone"]) ? "nav-link active" : "nav-link"}>
             Kickstart
           </Link>
         </div>

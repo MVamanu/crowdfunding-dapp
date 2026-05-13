@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import { Connection, PublicKey, clusterApiUrl, SystemProgram } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../components/ConnectWalletModal";
 import "./CampaignDetail.css";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const ETH_CONTRACT_ADDRESS = "0x53EF55468DF1570952b7A07eF46926c3837e5770";
+const ETH_CONTRACT_ADDRESS = CONTRACTS.eth;
 const ETH_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goal,uint256 amountRaised,bool isActive,uint256 deadline))",
   "function donate(uint256) payable",
   "function withdraw(uint256)",
 ];
-const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SEPOLIA_RPC = SEPOLIA_RPC_URL;
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
 
 export default function CampaignDetail({ ethContract, ethConnected, ethAddress, onConnectEth, onConnectSol, onConnectSolflare, solWallet, solConnected }) {
   const { blockchain, id } = useParams();
@@ -42,7 +43,7 @@ export default function CampaignDetail({ ethContract, ethConnected, ethAddress, 
             blockchain: "eth"
           });
         } else if (blockchain === "sol") {
-          const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+          const connection = new Connection(SOLANA_RPC_URL, "confirmed");
           const dummyWallet = { publicKey: PublicKey.default, signTransaction: async t => t, signAllTransactions: async t => t };
           const provider = new anchor.AnchorProvider(connection, dummyWallet, { commitment: "confirmed" });
           anchor.setProvider(provider);
@@ -88,7 +89,7 @@ export default function CampaignDetail({ ethContract, ethConnected, ethAddress, 
       if (!amount || Number(amount) <= 0) { setError("Enter a valid amount."); return; }
       setDonating(true);
       try {
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
         const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
         anchor.setProvider(provider);
         const idl = await anchor.Program.fetchIdl(SOL_PROGRAM_ID, provider);

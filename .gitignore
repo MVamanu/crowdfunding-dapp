@@ -7,3 +7,9 @@ ignition/deployments/
 test-ledger/
 *.log
 .anchor/
+**/node_modules/
+**/target/
+**/dist/
+**/ignition/deployments/
+**/test-ledger/
+**/.anchor/

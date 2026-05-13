@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import "./CreateUnifiedCampaign.css";
+import { CONTRACTS } from "../config/chains";
 
-const UNIFIED_CONTRACT = "0x4C6b83E06c9B7f83a029312eA9E3E00E7CBC6a5e";
+const UNIFIED_CONTRACT = CONTRACTS.unified;
 const UNIFIED_ABI = [
   "function createCampaign(string,string,uint256,uint256,string) returns (uint256)",
   "function campaignCount() view returns (uint256)",

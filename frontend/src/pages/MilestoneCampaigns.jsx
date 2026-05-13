@@ -2,14 +2,15 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
 import "./MilestoneCampaigns.css";
+import { CONTRACTS, SEPOLIA_RPC_URL } from "../config/chains";
 
-const MILESTONE_CONTRACT = "0x50B8de29C8226a85c99b9679060A30a180277a1E";
+const MILESTONE_CONTRACT = CONTRACTS.milestone;
 const MILESTONE_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 totalGoal,uint256 amountRaised,bool isActive,uint256 deadline,uint256 milestoneCount,uint256 currentMilestone))",
   "function getMilestone(uint256,uint256) view returns (tuple(string title,string description,uint256 amount,bool completed,bool approved,uint256 votesFor,uint256 votesAgainst,uint256 votingDeadline,bool votingActive))",
   "function campaignCount() view returns (uint256)",
 ];
-const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
+const SEPOLIA_RPC = SEPOLIA_RPC_URL;
 
 export default function MilestoneCampaigns() {
   const [campaigns, setCampaigns] = useState([]);

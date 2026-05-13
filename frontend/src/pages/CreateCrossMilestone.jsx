@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import "./CreateMilestoneCampaign.css";
+import { CONTRACTS } from "../config/chains";
 
-const CROSS_MILESTONE_CONTRACT = "0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E";
+const CROSS_MILESTONE_CONTRACT = CONTRACTS.crossMilestone;
 const CROSS_MILESTONE_ABI = [
   "function createCampaign(string,string,uint256,uint256,string,string,string[],string[],uint256[]) returns (uint256)",
   "function campaignCount() view returns (uint256)",

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
-import { Connection, PublicKey, SystemProgram, clusterApiUrl } from "@solana/web3.js";
+import { Connection, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import "./CreateCampaign.css";
+import { SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const PROGRAM_ID = SOLANA_PROGRAM_ID;
 
 export default function CreateCampaign({ ethContract, solWallet, ethConnected, solConnected }) {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ export default function CreateCampaign({ ethContract, solWallet, ethConnected, s
         await tx.wait();
         navigate("/");
       } else if (blockchain === "sol" && solWallet) {
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
         const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
         anchor.setProvider(provider);
 

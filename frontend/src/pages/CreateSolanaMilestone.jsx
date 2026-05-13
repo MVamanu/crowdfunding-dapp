@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Connection, PublicKey, clusterApiUrl, SystemProgram, Keypair } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import "./CreateMilestoneCampaign.css";
+import { SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
 
 export default function CreateSolanaMilestone({ solWallet, solConnected }) {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function CreateSolanaMilestone({ solWallet, solConnected }) {
 
     setLoading(true);
     try {
-      const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+      const connection = new Connection(SOLANA_RPC_URL, "confirmed");
       const provider = new anchor.AnchorProvider(connection, solWallet, { commitment: "confirmed" });
       anchor.setProvider(provider);
 

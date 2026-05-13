@@ -123,6 +123,7 @@ contract Crowdfunding {
     function refund(uint256 _id) external campaignExists(_id) {
         Campaign storage campaign = campaigns[_id];
         require(block.timestamp >= campaign.deadline, "Campania inca ruleaza");
+        require(campaign.amountRaised < campaign.goal, "Goalul a fost atins");
 
         uint256 amount = donations[_id][msg.sender];
         require(amount > 0, "Nu ai donatii de returnat");

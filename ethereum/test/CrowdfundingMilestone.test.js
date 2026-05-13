@@ -66,6 +66,39 @@ describe("CrowdfundingMilestone", async function () {
     );
   });
 
+  it("esueaza daca descrierile milestone nu se potrivesc cu titlurile", async function () {
+    const contract = await viem.deployContract("CrowdfundingMilestone");
+    await assert.rejects(
+      contract.write.createCampaign([
+        "Test", "Descriere", 30n,
+        milestoneTitles, ["Doar una"], milestoneAmounts
+      ]),
+      /Date invalide/
+    );
+  });
+
+  it("nu accepta donatii dupa deadline", async function () {
+    const contract = await viem.deployContract("CrowdfundingMilestone");
+    await contract.write.createCampaign([
+      "Test", "Descriere", 1n,
+      milestoneTitles, milestoneDescs, milestoneAmounts
+    ]);
+
+    await publicClient.request({
+      method: "evm_increaseTime",
+      params: [2 * 24 * 60 * 60],
+    });
+    await publicClient.request({ method: "evm_mine", params: [] });
+
+    await assert.rejects(
+      contract.write.donate([0n], {
+        value: 1000000000000000000n,
+        account: walletClients[1].account
+      }),
+      /Campania a expirat/
+    );
+  });
+
   it("submit milestone dupa atingerea goalului", async function () {
     const contract = await viem.deployContract("CrowdfundingMilestone");
     await contract.write.createCampaign([
@@ -103,5 +136,32 @@ describe("CrowdfundingMilestone", async function () {
       contract.write.vote([0n, 0n, true], { account: walletClients[2].account }),
       /Trebuie sa fii donator/
     );
+  });
+
+  it("doar ownerul poate finaliza milestone-ul curent", async function () {
+    const contract = await viem.deployContract("CrowdfundingMilestone");
+    await contract.write.createCampaign([
+      "Test", "Descriere", 30n,
+      milestoneTitles, milestoneDescs, milestoneAmounts
+    ]);
+    await contract.write.donate([0n], { value: 1000000000000000000n, account: walletClients[1].account });
+    await contract.write.submitMilestone([0n]);
+    await contract.write.vote([0n, 0n, true], { account: walletClients[1].account });
+
+    await assert.rejects(
+      contract.write.finalizeMilestone([0n, 0n], { account: walletClients[1].account }),
+      /Nu esti proprietarul/
+    );
+
+    await assert.rejects(
+      contract.write.finalizeMilestone([0n, 1n]),
+      /Milestone invalid/
+    );
+
+    await contract.write.finalizeMilestone([0n, 0n]);
+    const campaign = await contract.read.getCampaign([0n]);
+    const milestone = await contract.read.getMilestone([0n, 0n]);
+    assert.equal(campaign.currentMilestone, 1n);
+    assert.equal(milestone.approved, true);
   });
 });

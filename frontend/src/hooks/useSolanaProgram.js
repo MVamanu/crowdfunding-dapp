@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { Connection } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
-
-const PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
-const NETWORK = clusterApiUrl("devnet");
+import { SOLANA_RPC_URL } from "../config/chains";
 
 export function useSolanaProgram(wallet) {
   const [program, setProgram] = useState(null);
   const [connection, setConnection] = useState(null);
 
   useEffect(() => {
-    const conn = new Connection(NETWORK, "confirmed");
+    const conn = new Connection(SOLANA_RPC_URL, "confirmed");
     setConnection(conn);
 
     if (wallet && wallet.publicKey) {

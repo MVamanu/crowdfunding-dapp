@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import "./MilestoneCampaigns.css";
+import { SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SOL_PROGRAM_ID = SOLANA_PROGRAM_ID;
 
 export default function SolanaMilestoneCampaigns() {
   const [campaigns, setCampaigns] = useState([]);
@@ -14,7 +15,7 @@ export default function SolanaMilestoneCampaigns() {
     async function load() {
       setLoading(true);
       try {
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
         const dummyWallet = {
           publicKey: PublicKey.default,
           signTransaction: async t => t,

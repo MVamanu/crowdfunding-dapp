@@ -1,9 +1,0 @@
-\\?\C:\Projects\CrowdFundingApp\solana\crowdfunding\target\sbpf-solana-solana\release\deps\solana_loader_v3_interface-9a79388b48493cf1.d: C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\lib.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\instruction.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\state.rs
-
-\\?\C:\Projects\CrowdFundingApp\solana\crowdfunding\target\sbpf-solana-solana\release\deps\libsolana_loader_v3_interface-9a79388b48493cf1.rlib: C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\lib.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\instruction.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\state.rs
-
-\\?\C:\Projects\CrowdFundingApp\solana\crowdfunding\target\sbpf-solana-solana\release\deps\libsolana_loader_v3_interface-9a79388b48493cf1.rmeta: C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\lib.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\instruction.rs C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\state.rs
-
-C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\lib.rs:
-C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\instruction.rs:
-C:\Users\Zorbu\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\solana-loader-v3-interface-5.0.0\src\state.rs:
