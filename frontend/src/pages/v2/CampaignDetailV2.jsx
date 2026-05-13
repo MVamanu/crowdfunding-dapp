@@ -59,7 +59,23 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
     const contract = new ethers.Contract(STABLE_V2_CONTRACT, STABLE_V2_ABI, provider);
     const c = await contract.getCampaign(Number(id));
     const total = await contract.getTotalRaised(Number(id));
-    const solExt = await contract.getExternalDonations(Number(id), "sol");
+    let solExt = BigInt((await contract.getExternalDonations(Number(id), "sol")).toString());
+
+    if (c.solanaId) {
+      try {
+        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const solCampaignPubkey = new PublicKey(c.solanaId);
+        const [vaultPDA] = PublicKey.findProgramAddressSync(
+          [Buffer.from("vault"), solCampaignPubkey.toBuffer()],
+          SOL_PROGRAM_ID
+        );
+        const tokenAccInfo = await connection.getTokenAccountBalance(vaultPDA);
+        solExt = BigInt(tokenAccInfo.value.amount);
+      } catch {
+        console.log("SOL mirror balance fallback");
+      }
+    }
+
     if (ethAddress) {
       const donation = await contract.getDonation(Number(id), ethAddress);
       setUserDonation(donation.toString());
@@ -70,11 +86,12 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
     return {
       id: Number(id), owner: c.owner, title: c.title, description: c.description,
       goalUSDC: c.goalUSDC, amountRaisedLocal: c.amountRaisedLocal,
-      amountRaisedExternal: c.amountRaisedExternal, totalRaised: total,
+      amountRaisedExternal: solExt, totalRaised: BigInt(total.toString()) + solExt - BigInt(c.amountRaisedExternal.toString()),
       solExternal: solExt,
       isActive: c.isActive, deadline: new Date(Number(c.deadline) * 1000),
       goalReached: c.goalReached, mainChain: c.mainChain,
       acceptedChains: c.acceptedChains, blockchain: "eth",
+      solanaId: c.solanaId,
     };
   }
 
@@ -245,7 +262,11 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
       anchor.setProvider(provider);
       const idl = await anchor.Program.fetchIdl(SOL_PROGRAM_ID, provider);
       const program = new anchor.Program(idl, provider);
-      const campaignPubkey = new PublicKey(id);
+      const solanaCampaignId = blockchain === "eth" ? campaign?.solanaId : id;
+      if (!solanaCampaignId) {
+        throw new Error("Aceasta campanie nu are mirror Solana pentru donatii USDC.");
+      }
+      const campaignPubkey = new PublicKey(solanaCampaignId);
       const [vaultPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from("vault"), campaignPubkey.toBuffer()], SOL_PROGRAM_ID
       );
@@ -268,7 +289,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .rpc();
-      setSuccess("Donatie SOL USDC efectuata!");
+      setSuccess("Donatie Solana USDC efectuata!");
       setAmount("");
       await loadData();
     } catch (e) { setError(e.message || "Eroare donatie SOL."); }

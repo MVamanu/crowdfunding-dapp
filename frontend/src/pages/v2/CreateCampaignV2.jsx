@@ -31,7 +31,15 @@ export default function CreateCampaignV2({ ethConnected, solWallet, solConnected
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
+  const selectMainChain = (chainId) => {
+    setMainChain(chainId);
+    if (!acceptedChains.includes(chainId)) {
+      setAcceptedChains([...acceptedChains, chainId]);
+    }
+  };
+
   const toggleChain = (chainId) => {
+    if (chainId === mainChain) return;
     if (acceptedChains.includes(chainId)) {
       if (acceptedChains.length > 1) {
         setAcceptedChains(acceptedChains.filter(c => c !== chainId));
@@ -100,10 +108,31 @@ export default function CreateCampaignV2({ ethConnected, solWallet, solConnected
       const goalInUsdc = BigInt(Math.round(parseFloat(form.goal) * 1_000_000));
 
       if (mainChain === "eth") {
-        setStatus("Se creeaza campania pe Ethereum...");
-        await createOnEth(goalInUsdc, "");
-        setStatus("Campanie creata cu succes!");
+        let solanaCampaignId = "";
+        if (acceptedChains.includes("sol")) {
+          if (!solWallet) {
+            setError("Conecteaza Phantom/Solflare pentru a activa donatii USDC din Solana.");
+            setLoading(false);
+            return;
+          }
+          setStatus("Pas 1/2: Se creeaza mirror-ul pe Solana...");
+          solanaCampaignId = await createOnSol(goalInUsdc);
+        }
+
+        setStatus(acceptedChains.includes("sol")
+          ? "Pas 2/2: Se creeaza campania pe Ethereum..."
+          : "Se creeaza campania pe Ethereum...");
+        await createOnEth(goalInUsdc, solanaCampaignId);
+        setStatus(acceptedChains.includes("sol")
+          ? "Campanie cross-chain creata cu succes!"
+          : "Campanie creata cu succes!");
       } else {
+        if (acceptedChains.includes("eth") && !ethConnected) {
+          setError("Conecteaza MetaMask pentru a activa donatii USDC din Ethereum.");
+          setLoading(false);
+          return;
+        }
+
         // Pas 1: Cream pe Solana
         setStatus("Pas 1/2: Se creeaza campania pe Solana...");
         const solanaCampaignId = await createOnSol(goalInUsdc);
@@ -158,7 +187,7 @@ export default function CreateCampaignV2({ ethConnected, solWallet, solConnected
                 {CHAINS.map(chain => (
                   <button
                     key={chain.id}
-                    onClick={() => setMainChain(chain.id)}
+                    onClick={() => selectMainChain(chain.id)}
                     style={{
                       padding:"16px", borderRadius:"var(--radius-lg)", cursor:"pointer",
                       border:`2px solid ${mainChain === chain.id ? chain.color : "var(--border)"}`,
@@ -202,7 +231,9 @@ export default function CreateCampaignV2({ ethConnected, solWallet, solConnected
                     </span>
                     <div>
                       <div style={{fontWeight:"600", fontSize:"14px", color:"var(--navy)"}}>{chain.name}</div>
-                      <div style={{fontSize:"11px", color:"var(--text-muted)"}}>{chain.symbol} USDC</div>
+                      <div style={{fontSize:"11px", color:"var(--text-muted)"}}>
+                        {chain.symbol} USDC{chain.id === mainChain ? " - obligatoriu" : ""}
+                      </div>
                     </div>
                   </button>
                 ))}
