@@ -54,6 +54,8 @@
 | `CrowdfundingMilestone` | [`0x50B8...1A4E`](https://sepolia.etherscan.io/address/0x50B8de29C8226a85c99b9679060A30a180277a1E) | Milestone cu vot proporțional |
 | `CrowdfundingUnified` | [`0x4C6b...6a5e`](https://sepolia.etherscan.io/address/0x4C6b83E06c9B7f83a029312eA9E3E00E7CBC6a5e) | Goal în USD, cross-chain simplu |
 | `CrowdfundingCrossMilestone` | [`0x9613...A4E`](https://sepolia.etherscan.io/address/0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E) | Cross-chain cu milestone-uri |
+| `CrowdfundingStableV2` | [`0xE3Ae...C1e40`](https://sepolia.etherscan.io/address/0xE3Ae8c1BF26e6bAfe7EDc5143Cd288B9DF4C1e40) | Campanii v2 cu goal stabil in USDC si mirror Solana |
+| `CrowdfundingStableMilestoneV2` | [`0xB0c5...7998`](https://sepolia.etherscan.io/address/0xB0c5218ef966c6EBfEedE21909595cC327267998) | Kickstart v2 USDC cu milestone-uri si mirror cross-chain |
 
 ### Solana — Devnet
 
@@ -61,6 +63,36 @@
 |-----------|--------|
 | Program ID | `HueY3M7RaNwcZGo9Qbg1J88Qmx2nBTtAcxQSU7W1TPLD` |
 | IDL Account | `BNUek9Z8uYTx8P26cZmaST9Pkz9id9PnRy9JCVSejFF1` |
+
+---
+
+## FundChain v2 - USDC stabil
+
+Versiunea v2 foloseste USDC ca unitate principala pentru campaniile noi, astfel incat suma donata si progresul campaniei sa ramana stabile indiferent daca utilizatorul intra din ecosistemul Ethereum sau Solana.
+
+### Campanii simple v2
+
+- Campaniile pot avea chain principal Ethereum sau Solana.
+- Daca sunt acceptate ambele chain-uri, aplicatia creeaza si un mirror pe celalalt chain.
+- Donatiile USDC pe Ethereum sunt inregistrate in contractul `CrowdfundingStableV2`.
+- Donatiile USDC pe Solana intra in vault-ul SPL USDC al programului Anchor.
+- Pentru campaniile Ethereum care accepta Solana, pagina de detaliu citeste live soldul mirror-ului Solana si il include in progresul afisat.
+
+### Kickstart v2 cu milestone-uri
+
+- Campaniile Kickstart v2 folosesc goal si milestone-uri exprimate in USDC.
+- Ethereum accepta doua moduri de donatie:
+  - USDC direct.
+  - ETH convertit in USDC prin Uniswap Sepolia, apoi donat in contract.
+- Solana accepta USDC SPL direct pe devnet.
+- Pentru campaniile ETH + SOL, aplicatia creeaza mirror-ul Solana si salveaza adresa lui in `campaignChains`.
+- Pentru campaniile SOL + ETH, aplicatia creeaza mirror-ul Ethereum si pagina Solana gaseste mirror-ul prin contract sau cache local.
+- Progresul cross-chain este afisat in UI prin combinarea sumei locale cu suma din mirror.
+
+### Limitari v2 pe devnet
+
+- Pe Solana devnet, donatiile sunt USDC SPL direct. Conversia SOL -> USDC prin Jupiter este planificata pentru mainnet, deoarece rutele si mint-ul USDC principal difera de devnet.
+- Votul si release-ul fondurilor raman locale pe chain-ul campaniei/mirror-ului unde sunt donate fondurile. UI-ul afiseaza progresul cross-chain, dar sincronizarea automata de vot/release intre chain-uri necesita un mecanism suplimentar de mesagerie/oracle.
 
 ---
 
@@ -175,6 +207,8 @@ crowdfunding-dapp/
 
 ## Testare
 
+### Ethereum
+
 ```bash
 cd ethereum
 npx hardhat test
@@ -188,6 +222,34 @@ npx hardhat test
 | `CrowdfundingMilestone` | create, donate, submitMilestone, vote, finalize |
 | `CrowdfundingUnified` | create, donate, withdraw |
 | `CrowdfundingCrossMilestone` | create, donateETH, recordSolDonation, vote |
+
+### Frontend
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+### Solana
+
+Testele Solana se ruleaza local/manual din workspace-ul Anchor:
+
+```bash
+cd solana/crowdfunding
+npm run test:devnet
+```
+
+Suite-ul curent acopera 14 teste pentru:
+
+- campanii SOL simple;
+- donatii SOL;
+- milestone-uri SOL;
+- vot si finalizare milestone;
+- campanii USDC pe Solana;
+- donatii USDC si setarea `goalReached`.
+
+Pe devnet pot aparea mesaje `429 Too Many Requests` de la RPC; acestea sunt retry-uri si nu indica esec daca testele se incheie cu `14 passing`.
 
 ---
 
