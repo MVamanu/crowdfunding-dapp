@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useVersion } from "../context/VersionContext";
+import { useVersion } from "../context/version";
 import "./Navbar.css";
 
 export default function Navbar({ ethConnected, solConnected, ethAddress, solAddress, solWalletName, onConnectEth, onConnectSol, onConnectSolflare, onDisconnectEth, onDisconnectSol }) {

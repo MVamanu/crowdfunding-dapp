@@ -1,6 +1,5 @@
-import { createContext, useContext, useState } from "react";
-
-export const VersionContext = createContext("v1");
+import { useState } from "react";
+import { VersionContext } from "./version";
 
 export function VersionProvider({ children }) {
   const [version, setVersion] = useState(
@@ -17,8 +16,4 @@ export function VersionProvider({ children }) {
       {children}
     </VersionContext.Provider>
   );
-}
-
-export function useVersion() {
-  return useContext(VersionContext);
 }
