@@ -7,7 +7,7 @@ import "./V2.css";
 import "../CreateCampaign.css";
 
 const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SOL_PROGRAM_ID = new PublicKey("HueY3M7RaNwcZGo9Qbg1J88Qmx2nBTtAcxQSU7W1TPLD");
 const USDC_MINT_DEVNET = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 const STABLE_V2_ABI = [

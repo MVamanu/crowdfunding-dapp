@@ -30,7 +30,7 @@ export const CONTRACTS = {
 };
 
 export const SOLANA_PROGRAM_ID = new PublicKey(
-  import.meta.env.VITE_SOLANA_PROGRAM_ID || "9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi"
+  import.meta.env.VITE_SOLANA_PROGRAM_ID || "HueY3M7RaNwcZGo9Qbg1J88Qmx2nBTtAcxQSU7W1TPLD"
 );
 
 export const USDC = {

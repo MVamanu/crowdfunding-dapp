@@ -9,7 +9,7 @@ import { getDaysLeft } from "../../utils/time";
 
 const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
 const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
-const SOL_PROGRAM_ID = new PublicKey("9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi");
+const SOL_PROGRAM_ID = new PublicKey("HueY3M7RaNwcZGo9Qbg1J88Qmx2nBTtAcxQSU7W1TPLD");
 
 const STABLE_V2_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSDC,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains))",

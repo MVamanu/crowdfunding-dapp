@@ -59,8 +59,8 @@
 
 | Componentă | Adresă |
 |-----------|--------|
-| Program ID | `9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi` |
-| IDL Account | `BnyoyxFzT1F81969wmnw4Z83rT6Kzxh8vzBMqkimadov` |
+| Program ID | `HueY3M7RaNwcZGo9Qbg1J88Qmx2nBTtAcxQSU7W1TPLD` |
+| IDL Account | `BNUek9Z8uYTx8P26cZmaST9Pkz9id9PnRy9JCVSejFF1` |
 
 ---
 
