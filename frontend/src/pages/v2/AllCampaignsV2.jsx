@@ -1,20 +1,25 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import "../AllCampaigns.css";
 import "./V2.css";
 import { getDaysLeft } from "../../utils/time";
+import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../../config/chains";
 
-const STABLE_V2_CONTRACT = "0xe3222De4403B1B48C687a60449C6Bd9c31f5Cb87";
-const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/FnqvmZrEEWYvwZaX3dk0zPlUNi7_Ggdm";
-const SOL_PROGRAM_ID = new PublicKey("HueY3M7RaNwcZGo9Qbg1J88Qmx2nBTtAcxQSU7W1TPLD");
+const STABLE_V2_CONTRACT = CONTRACTS.stableV2;
+const STABLE_MILESTONE_CONTRACT = CONTRACTS.stableMilestone;
 
 const STABLE_V2_ABI = [
   "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 goalUSDC,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains))",
   "function campaignCount() view returns (uint256)",
   "function getTotalRaised(uint256) view returns (uint256)",
+];
+
+const STABLE_MILESTONE_ABI = [
+  "function campaignCount() view returns (uint256)",
+  "function getCampaign(uint256) view returns (tuple(address owner,string title,string description,uint256 totalGoal,uint256 amountRaisedLocal,uint256 amountRaisedExternal,bool isActive,uint256 deadline,bool goalReached,string mainChain,string[] acceptedChains,uint256 milestoneCount,uint256 currentMilestone))",
 ];
 
 export default function AllCampaignsV2() {
@@ -29,7 +34,7 @@ export default function AllCampaignsV2() {
 
       // ETH USDC campanii - CrowdfundingStableV2
       try {
-        const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
+        const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC_URL);
         const contract = new ethers.Contract(STABLE_V2_CONTRACT, STABLE_V2_ABI, provider);
         const count = await contract.campaignCount();
         for (let i = 0; i < Number(count); i++) {
@@ -48,14 +53,43 @@ export default function AllCampaignsV2() {
             mainChain: c.mainChain,
             acceptedChains: c.acceptedChains,
             blockchain: "eth",
+            campaignType: "simple",
             route: `/v2/campaign/eth/${i}`,
           });
         }
       } catch (e) { console.error("ETH USDC error:", e); }
 
+      // ETH USDC Kickstart / milestone campanii
+      try {
+        const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC_URL);
+        const contract = new ethers.Contract(STABLE_MILESTONE_CONTRACT, STABLE_MILESTONE_ABI, provider);
+        const count = await contract.campaignCount();
+        for (let i = 0; i < Number(count); i++) {
+          const c = await contract.getCampaign(i);
+          all.push({
+            id: `eth-kickstart-${i}`,
+            title: c.title,
+            description: c.description,
+            goal: Number(c.totalGoal),
+            amountRaised: Number(c.amountRaisedLocal) + Number(c.amountRaisedExternal),
+            isActive: c.isActive,
+            owner: c.owner,
+            deadline: new Date(Number(c.deadline) * 1000),
+            goalReached: c.goalReached,
+            mainChain: c.mainChain,
+            acceptedChains: c.acceptedChains,
+            blockchain: "eth",
+            campaignType: "milestone",
+            milestoneCount: Number(c.milestoneCount),
+            currentMilestone: Number(c.currentMilestone),
+            route: `/v2/kickstart/${i}`,
+          });
+        }
+      } catch (e) { console.error("ETH USDC milestone error:", e); }
+
       // Solana USDC campanii
       try {
-        const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+        const connection = new Connection(SOLANA_RPC_URL, "confirmed");
         const dummyWallet = {
           publicKey: PublicKey.default,
           signTransaction: async t => t,
@@ -63,38 +97,66 @@ export default function AllCampaignsV2() {
         };
         const prov = new anchor.AnchorProvider(connection, dummyWallet, { commitment: "confirmed" });
         anchor.setProvider(prov);
-        const idl = await anchor.Program.fetchIdl(SOL_PROGRAM_ID, prov);
+        const idl = await anchor.Program.fetchIdl(SOLANA_PROGRAM_ID, prov);
         if (idl) {
           const program = new anchor.Program(idl, prov);
-          const accounts = await program.account.usdcCampaign.all();
-          for (const acc of accounts) {
-            const d = acc.account;
-            // Citim vault balance real
-            let vaultBalance = Number(d.amountRaised);
-            try {
-              const [vaultPDA] = PublicKey.findProgramAddressSync(
-                [Buffer.from("vault"), acc.publicKey.toBuffer()], SOL_PROGRAM_ID
-              );
-              const tokenAccInfo = await connection.getTokenAccountBalance(vaultPDA);
-              vaultBalance = Number(tokenAccInfo.value.amount);
-            } catch {
-              vaultBalance = Number(d.amountRaised);
+
+          if (program.account.usdcCampaign) {
+            const accounts = await program.account.usdcCampaign.all();
+            for (const acc of accounts) {
+              const d = acc.account;
+              let vaultBalance = Number(d.amountRaised);
+              try {
+                const [vaultPDA] = PublicKey.findProgramAddressSync(
+                  [Buffer.from("vault"), acc.publicKey.toBuffer()], SOLANA_PROGRAM_ID
+                );
+                const tokenAccInfo = await connection.getTokenAccountBalance(vaultPDA);
+                vaultBalance = Number(tokenAccInfo.value.amount);
+              } catch {
+                vaultBalance = Number(d.amountRaised);
+              }
+              all.push({
+                id: `sol-${acc.publicKey.toString()}`,
+                title: d.title,
+                description: d.description,
+                goal: Number(d.goal),
+                amountRaised: vaultBalance,
+                isActive: d.isActive,
+                owner: d.owner.toString(),
+                deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                goalReached: d.goalReached,
+                mainChain: "sol",
+                acceptedChains: ["sol", "eth"],
+                blockchain: "sol",
+                campaignType: "simple",
+                route: `/v2/campaign/sol/${acc.publicKey.toString()}`,
+              });
             }
-            all.push({
-              id: `sol-${acc.publicKey.toString()}`,
-              title: d.title,
-              description: d.description,
-              goal: Number(d.goal),
-              amountRaised: vaultBalance,
-              isActive: d.isActive,
-              owner: d.owner.toString(),
-              deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              goalReached: d.goalReached,
-              mainChain: "sol",
-              acceptedChains: ["sol", "eth"],
-              blockchain: "sol",
-              route: `/v2/campaign/sol/${acc.publicKey.toString()}`,
-            });
+          }
+
+          if (program.account.usdcMilestoneCampaign) {
+            const accounts = await program.account.usdcMilestoneCampaign.all();
+            for (const acc of accounts) {
+              const d = acc.account;
+              all.push({
+                id: `sol-kickstart-${acc.publicKey.toString()}`,
+                title: d.title,
+                description: d.description,
+                goal: Number(d.totalGoal),
+                amountRaised: Number(d.amountRaised),
+                isActive: d.isActive,
+                owner: d.owner.toString(),
+                deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                goalReached: d.goalReached,
+                mainChain: "sol",
+                acceptedChains: ["sol"],
+                blockchain: "sol",
+                campaignType: "milestone",
+                milestoneCount: Number(d.milestoneCount),
+                currentMilestone: Number(d.currentMilestone),
+                route: `/v2/kickstart/sol/${acc.publicKey.toString()}`,
+              });
+            }
           }
         }
       } catch (e) { console.error("SOL USDC error:", e); }
@@ -151,7 +213,6 @@ export default function AllCampaignsV2() {
                     onClick={() => setFilter(v)}>{l}</button>
                 ))}
               </div>
-              <Link to="/v2/create" className="btn-usdc">+ Campanie Noua</Link>
             </div>
           </div>
 
@@ -164,10 +225,7 @@ export default function AllCampaignsV2() {
             <div className="empty-state">
               <div className="empty-icon">o</div>
               <h3>Nicio campanie USDC</h3>
-              <p>Fii primul care lanseaza o campanie in stablecoin.</p>
-              <Link to="/v2/create" className="btn-usdc" style={{display:"inline-block", marginTop:"16px"}}>
-                + Campanie Noua
-              </Link>
+              <p>Campaniile USDC create vor aparea aici.</p>
             </div>
           ) : (
             <div className="campaigns-grid">
@@ -182,6 +240,9 @@ export default function AllCampaignsV2() {
                     <div className="card-header">
                       <div className="card-badges">
                         <span className="badge badge-usdc">USDC</span>
+                        <span className="badge badge-active">
+                          {c.campaignType === "milestone" ? "Milestone" : "Simpla"}
+                        </span>
                         <span className="badge" style={{
                           background:`${chainColor}20`,
                           color:chainColor,
@@ -222,7 +283,9 @@ export default function AllCampaignsV2() {
                           <span className="owner-addr">{c.owner?.slice(0,6)}...{c.owner?.slice(-4)}</span>
                         </div>
                         <span style={{fontSize:"11px", color:"var(--text-muted)"}}>
-                          Main: {c.mainChain?.toUpperCase()}
+                          {c.campaignType === "milestone" && c.milestoneCount
+                            ? `Milestone: ${Math.min((c.currentMilestone || 0) + 1, c.milestoneCount)}/${c.milestoneCount}`
+                            : `Main: ${c.mainChain?.toUpperCase()}`}
                         </span>
                       </div>
                     </div>

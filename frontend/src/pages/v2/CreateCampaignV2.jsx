@@ -164,17 +164,17 @@ export default function CreateCampaignV2({ ethConnected, solWallet, solConnected
     <div className="create-page">
       <div className="container">
         <div className="create-header">
-          <div className="v2-badge">v2 - USDC Cross-Chain</div>
-          <h1 className="create-title">Creeaza Campanie USDC</h1>
+          <div className="v2-badge">v2 - ONG / Fundatii</div>
+          <h1 className="create-title">Creeaza Campanie Simpla USDC</h1>
           <div className="divider"></div>
-          <p className="create-desc">Goal in USDC, donatii acceptate din multiple blockchain-uri. Tu alegi unde e principala logica.</p>
+          <p className="create-desc">Campanie simpla pentru strangere de fonduri in USDC. Tu alegi chain-ul principal si unde accepti donatii.</p>
         </div>
 
         <div className="create-layout">
           <div className="create-form card">
 
             <div className="usdc-note">
-              <span>ðŸ’¡</span>
+              <span>Info</span>
               <span>1 USDC = $1 USD intotdeauna, pe orice blockchain.</span>
             </div>
 
@@ -227,7 +227,7 @@ export default function CreateCampaignV2({ ethConnected, solWallet, solConnected
                       display:"flex", alignItems:"center", justifyContent:"center",
                       color:"white", fontSize:"12px", fontWeight:"700"
                     }}>
-                      {acceptedChains.includes(chain.id) ? "âœ“" : ""}
+                      {acceptedChains.includes(chain.id) ? "OK" : ""}
                     </span>
                     <div>
                       <div style={{fontWeight:"600", fontSize:"14px", color:"var(--navy)"}}>{chain.name}</div>

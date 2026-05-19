@@ -51,7 +51,6 @@ export default function App() {
   useEffect(() => {
     async function autoConnect() {
       await new Promise(r => setTimeout(r, 500));
-      // Solana auto-connect ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â nu deschide popup, doar verifica daca deja conectat
       const solDisconnected = localStorage.getItem("sol_disconnected");
       if (!solDisconnected) {
         try {
@@ -69,7 +68,6 @@ export default function App() {
           }
         } catch { console.log("Sol auto-connect skip"); }
       }
-      // ETH auto-connect ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â foloseste eth_accounts (nu deschide popup)
       if (window.ethereum) {
         try {
           const ethDisconnected = localStorage.getItem("eth_disconnected");
@@ -191,6 +189,7 @@ export default function App() {
         <Route path="/v2/kickstart/create" element={<CreateKickstartV2 ethConnected={ethConnected} solConnected={solConnected} solWallet={solWallet} />} />
         <Route path="/v2/kickstart/sol/:id" element={<SolanaKickstartDetailV2 solWallet={solWallet} solConnected={solConnected} solAddress={solAddress} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/v2/kickstart/:id" element={<KickstartDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
+        <Route path="/v2/ong" element={<CreateCampaignV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/v2/create" element={<CreateCampaignV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} />} />
         <Route path="/v2/campaign/:blockchain/:id" element={<CampaignDetailV2 ethConnected={ethConnected} ethAddress={ethAddress} solWallet={solWallet} solConnected={solConnected} onConnectEth={connectEth} onConnectSol={connectSol} onConnectSolflare={connectSolflare} />} />
         <Route path="/create" element={
