@@ -48,6 +48,12 @@ function openInMetaMaskMobile() {
   window.location.href = `https://metamask.app.link/dapp/${dappUrl}`;
 }
 
+function confirmWalletInstall(walletName, installUrl) {
+  return window.confirm(`${walletName} nu a fost gasit. Vrei sa deschidem pagina de instalare?`)
+    ? window.open(installUrl, "_blank", "noopener,noreferrer")
+    : null;
+}
+
 export default function App() {
   const [ethConnected, setEthConnected] = useState(false);
   const [ethAddress, setEthAddress] = useState("");
@@ -102,10 +108,11 @@ export default function App() {
   async function connectEth() {
     if (!window.ethereum) {
       if (isMobileBrowser()) {
-        openInMetaMaskMobile();
+        const shouldOpenApp = window.confirm("MetaMask nu a fost gasit in browser. Vrei sa deschidem dApp-ul in MetaMask Mobile?");
+        if (shouldOpenApp) openInMetaMaskMobile();
         return;
       }
-      alert("MetaMask nu a fost gasit. Instaleaza extensia sau deschide pagina in browserul MetaMask.");
+      confirmWalletInstall("MetaMask", "https://metamask.io/download/");
       return;
     }
     localStorage.removeItem("eth_disconnected");
@@ -124,7 +131,15 @@ export default function App() {
   }
 
   async function connectSol() {
-    if (!window.solana || !window.solana.isPhantom) { alert("Phantom not found!"); return; }
+    if (!window.solana || !window.solana.isPhantom) {
+      if (isMobileBrowser()) {
+        const shouldOpen = window.confirm("Phantom nu a fost gasit in browser. Vrei sa deschidem pagina de instalare Phantom?");
+        if (shouldOpen) window.open("https://phantom.app/download", "_blank", "noopener,noreferrer");
+        return;
+      }
+      confirmWalletInstall("Phantom", "https://phantom.app/download");
+      return;
+    }
     localStorage.removeItem("sol_disconnected");
     localStorage.setItem("sol_last_wallet", "phantom");
     try {
@@ -155,7 +170,15 @@ export default function App() {
   }
 
   async function connectSolflare() {
-    if (!window.solflare) { alert("Solflare not found!"); return; }
+    if (!window.solflare) {
+      if (isMobileBrowser()) {
+        const shouldOpen = window.confirm("Solflare nu a fost gasit in browser. Vrei sa deschidem pagina de instalare Solflare?");
+        if (shouldOpen) window.open("https://solflare.com/download", "_blank", "noopener,noreferrer");
+        return;
+      }
+      confirmWalletInstall("Solflare", "https://solflare.com/download");
+      return;
+    }
     localStorage.removeItem("sol_disconnected");
     localStorage.setItem("sol_last_wallet", "solflare");
     try {
