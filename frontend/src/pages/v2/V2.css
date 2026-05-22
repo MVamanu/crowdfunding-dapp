@@ -44,6 +44,17 @@
 .cover-metric { min-width: 74px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.28); border-radius: var(--radius-lg); background: rgba(10,22,40,0.28); text-align: right; backdrop-filter: blur(8px); }
 .cover-metric span { display: block; font-size: 22px; font-weight: 700; line-height: 1; }
 .cover-metric small { display: block; margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.72; }
+.detail-hero-card { position: relative; display: flex; justify-content: space-between; align-items: flex-end; gap: 22px; min-height: 190px; margin: 22px 0 24px; padding: 28px; overflow: hidden; border-radius: var(--radius-lg); color: white; background: #0a1628; box-shadow: var(--shadow); }
+.detail-hero-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.16), transparent 42%), radial-gradient(circle at 85% 18%, rgba(255,255,255,0.22), transparent 30%); pointer-events: none; }
+.detail-hero-card > div { position: relative; z-index: 1; }
+.detail-hero-eth { background: linear-gradient(135deg, #10243f 0%, #2775CA 62%, #0a1628 100%); }
+.detail-hero-sol { background: linear-gradient(135deg, #20113d 0%, #9945FF 54%, #14F195 132%); }
+.detail-hero-kicker { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; opacity: 0.78; }
+.detail-hero-card strong { display: block; font-family: "Playfair Display", serif; font-size: 34px; line-height: 1.08; }
+.detail-hero-card p { max-width: 420px; margin: 10px 0 0; color: rgba(255,255,255,0.74); font-size: 14px; line-height: 1.6; }
+.detail-hero-progress { min-width: 168px; padding: 18px; border: 1px solid rgba(255,255,255,0.28); border-radius: var(--radius-lg); background: rgba(10,22,40,0.28); text-align: right; backdrop-filter: blur(8px); }
+.detail-hero-progress span { display: block; font-size: 38px; font-weight: 700; line-height: 1; }
+.detail-hero-progress small { display: block; margin-top: 8px; color: rgba(255,255,255,0.72); font-size: 12px; line-height: 1.4; }
 
 @media (max-width: 560px) {
   .v2-badge {
@@ -92,5 +103,22 @@
 
   .campaign-cover strong {
     font-size: 20px;
+  }
+
+  .detail-hero-card {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 0;
+    padding: 20px;
+  }
+
+  .detail-hero-card strong {
+    font-size: 28px;
+  }
+
+  .detail-hero-progress {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
   }
 }

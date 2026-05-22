@@ -334,6 +334,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
   const isExpired = isPastDeadline(campaign.deadline);
   const chainColor = blockchain === "sol" ? "#9945FF" : "#2775CA";
   const solWalletReady = solConnected || !!solWallet;
+  const chainLabel = blockchain === "sol" ? "Solana Devnet" : "Ethereum Sepolia";
 
   return (
     <div className="detail-page">
@@ -359,6 +360,18 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
 
             <h1 className="detail-title">{campaign.title}</h1>
             <div className="divider"></div>
+
+            <div className={`detail-hero-card ${blockchain === "sol" ? "detail-hero-sol" : "detail-hero-eth"}`}>
+              <div>
+                <span className="detail-hero-kicker">Campanie USDC live pe testnet</span>
+                <strong>{chainLabel}</strong>
+                <p>{campaign.goalReached ? "Obiectiv atins" : campaign.isActive ? "Campanie activa pentru contributii" : "Campanie inchisa"}</p>
+              </div>
+              <div className="detail-hero-progress">
+                <span>{progress.toFixed(1)}%</span>
+                <small>${raisedUSDC} din ${goalUSDC} USDC</small>
+              </div>
+            </div>
 
             <div className="detail-meta">
               <div className="meta-item">
