@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ethers } from "ethers";
 import Navbar from "./components/Navbar";
 import BackToTop from "./components/BackToTop";
+import PublicFooter from "./components/PublicFooter";
 import AllCampaigns from "./pages/AllCampaigns";
 import OngCampaigns from "./pages/OngCampaigns";
 import KickstartCampaigns from "./pages/KickstartCampaigns";
@@ -239,6 +240,7 @@ export default function App() {
             solConnected={solConnected} solWallet={solWallet} solWalletName={solWalletName} />
         } />
       </Routes>
+      <PublicFooter />
     </BrowserRouter>
     </VersionProvider>
   );
