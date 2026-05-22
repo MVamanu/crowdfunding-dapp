@@ -34,6 +34,16 @@
 .trust-strip-inner > div { min-height: 78px; padding: 16px; border: 1px solid rgba(39,117,202,0.16); border-radius: var(--radius-lg); background: rgba(39,117,202,0.05); }
 .trust-kicker { display: block; margin-bottom: 6px; color: #2775CA; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .trust-strip strong { display: block; color: var(--navy); font-size: 15px; line-height: 1.45; }
+.campaign-cover { position: relative; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; min-height: 132px; padding: 20px; overflow: hidden; color: white; background: #0a1628; }
+.campaign-cover::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.16), transparent 42%), radial-gradient(circle at 82% 20%, rgba(255,255,255,0.22), transparent 28%); pointer-events: none; }
+.campaign-cover > div { position: relative; z-index: 1; }
+.cover-eth { background: linear-gradient(135deg, #163b70 0%, #2775CA 58%, #0a1628 100%); }
+.cover-sol { background: linear-gradient(135deg, #241246 0%, #9945FF 52%, #14F195 130%); }
+.cover-kicker { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; opacity: 0.78; }
+.campaign-cover strong { display: block; max-width: 210px; font-family: "Playfair Display", serif; font-size: 22px; line-height: 1.15; }
+.cover-metric { min-width: 74px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.28); border-radius: var(--radius-lg); background: rgba(10,22,40,0.28); text-align: right; backdrop-filter: blur(8px); }
+.cover-metric span { display: block; font-size: 22px; font-weight: 700; line-height: 1; }
+.cover-metric small { display: block; margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.72; }
 
 @media (max-width: 560px) {
   .v2-badge {
@@ -73,5 +83,14 @@
 
   .trust-strip-inner {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .campaign-cover {
+    min-height: 116px;
+    padding: 16px;
+  }
+
+  .campaign-cover strong {
+    font-size: 20px;
   }
 }

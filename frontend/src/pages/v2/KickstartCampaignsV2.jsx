@@ -209,6 +209,7 @@ export default function KickstartCampaignsV2() {
                   campaign.milestoneCount > 0
                     ? `${Math.min(campaign.currentMilestone + 1, campaign.milestoneCount)}/${campaign.milestoneCount}`
                     : "0/0";
+                const isSolana = campaign.route?.includes("/sol/");
 
                 return (
                   <Link
@@ -216,6 +217,16 @@ export default function KickstartCampaignsV2() {
                     key={campaign.id}
                     className="campaign-card card v2-card"
                   >
+                    <div className={`campaign-cover ${isSolana ? "cover-sol" : "cover-eth"}`}>
+                      <div>
+                        <span className="cover-kicker">Kickstart USDC</span>
+                        <strong>Milestone {milestoneLabel}</strong>
+                      </div>
+                      <div className="cover-metric">
+                        <span>{progress.toFixed(0)}%</span>
+                        <small>finantat</small>
+                      </div>
+                    </div>
                     <div className="card-header">
                       <div className="card-badges">
                         <span className="badge badge-usdc">USDC</span>

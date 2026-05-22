@@ -194,8 +194,19 @@ export default function AllCampaignsV2() {
                 const goalUSDC = (c.goal / 1_000_000).toFixed(2);
                 const raisedUSDC = (c.amountRaised / 1_000_000).toFixed(2);
                 const chainColor = c.blockchain === "sol" ? "#9945FF" : "#2775CA";
+                const chainLabel = c.blockchain === "sol" ? "Solana Devnet" : "Ethereum Sepolia";
                 return (
                   <Link to={c.route} key={c.id} className="campaign-card card v2-card">
+                    <div className={`campaign-cover cover-${c.blockchain}`}>
+                      <div>
+                        <span className="cover-kicker">Campanie USDC</span>
+                        <strong>{chainLabel}</strong>
+                      </div>
+                      <div className="cover-metric">
+                        <span>{progress.toFixed(0)}%</span>
+                        <small>finantat</small>
+                      </div>
+                    </div>
                     <div className="card-header">
                       <div className="card-badges">
                         <span className="badge badge-usdc">USDC</span>
