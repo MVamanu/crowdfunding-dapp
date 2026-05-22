@@ -53,3 +53,39 @@
 .goal-label { font-size: 12px; color: var(--text-muted); }
 .goal-value { font-size: 13px; font-weight: 600; color: var(--navy); }
 .goal-native { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+@media (max-width: 520px) {
+  .campaign-card:hover {
+    transform: none;
+  }
+
+  .card-header,
+  .card-body,
+  .card-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .card-header,
+  .card-stats,
+  .card-goal,
+  .card-owner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .card-badges {
+    flex-wrap: wrap;
+  }
+
+  .card-stats > div {
+    flex: 1 1 46%;
+    min-width: 120px;
+  }
+
+  .owner-addr,
+  .goal-value {
+    overflow-wrap: anywhere;
+  }
+}

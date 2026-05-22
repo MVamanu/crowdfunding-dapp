@@ -152,3 +152,86 @@
   border-color: rgba(220,50,50,0.5);
   color: white;
 }
+
+@media (max-width: 980px) {
+  .navbar {
+    position: static;
+  }
+
+  .navbar-inner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    height: auto;
+    gap: 12px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .navbar-brand {
+    min-height: 36px;
+  }
+
+  .navbar-links {
+    order: 3;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .navbar-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-link {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius);
+  }
+
+  .nav-link:hover,
+  .nav-link.active {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(201,168,76,0.6);
+  }
+
+  .navbar-wallets {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .brand-name {
+    font-size: 20px;
+  }
+
+  .version-switcher {
+    order: 2;
+  }
+
+  .navbar-wallets {
+    order: 4;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .wallet-btn-group,
+  .sol-wallet-group {
+    flex: 1 1 auto;
+  }
+
+  .wallet-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 10px;
+  }
+
+  .disconnect-btn {
+    min-width: 34px;
+  }
+}
