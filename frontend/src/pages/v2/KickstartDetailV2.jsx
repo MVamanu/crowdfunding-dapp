@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ethers } from "ethers";
 import ConnectWalletModal from "../../components/ConnectWalletModal";
+import SocialShare from "../../components/SocialShare";
 import "../CampaignDetail.css";
 import "./V2.css";
 import { CONTRACTS, SEPOLIA_RPC_URL, UNISWAP, USDC } from "../../config/chains";
@@ -394,6 +395,7 @@ export default function KickstartDetailV2({ ethConnected, ethAddress, onConnectE
             </div>
 
             <div className="detail-description"><h3>Despre aceasta campanie</h3><p>{campaign.description}</p></div>
+            <SocialShare title={campaign.title} description={campaign.description} />
 
             <div className="detail-progress card">
               <div className="progress-header">

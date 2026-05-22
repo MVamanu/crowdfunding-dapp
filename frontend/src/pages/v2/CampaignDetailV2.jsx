@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../../components/ConnectWalletModal";
+import SocialShare from "../../components/SocialShare";
 import "../CampaignDetail.css";
 import "./V2.css";
 import { getDaysLeft, isPastDeadline } from "../../utils/time";
@@ -382,6 +383,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
               <h3>Despre aceasta campanie</h3>
               <p>{campaign.description}</p>
             </div>
+            <SocialShare title={campaign.title} description={campaign.description} />
 
             <div className="detail-progress card">
               <div className="progress-header">

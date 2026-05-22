@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../components/ConnectWalletModal";
+import SocialShare from "../components/SocialShare";
 import "./CampaignDetail.css";
 import { CONTRACTS, SEPOLIA_RPC_URL, SOLANA_PROGRAM_ID, SOLANA_RPC_URL } from "../config/chains";
 import { getDaysLeft } from "../utils/time";
@@ -155,6 +156,7 @@ export default function CampaignDetail({ ethContract, ethConnected, ethAddress, 
               <div className="meta-item"><span className="meta-label">Deadline</span><span className="meta-value">{campaign.deadline.toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"})} - {daysLeft} days left</span></div>
             </div>
             <div className="detail-description"><h3>About this campaign</h3><p>{campaign.description}</p></div>
+            <SocialShare title={campaign.title} description={campaign.description} />
             <div className="detail-progress card">
               <div className="progress-header">
                 <div><span className="progress-raised">{raisedFormatted} {currency}</span><span className="progress-label"> raised of {goalFormatted} {currency} goal</span></div>

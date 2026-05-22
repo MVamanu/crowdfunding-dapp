@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import ConnectWalletModal from "../../components/ConnectWalletModal";
+import SocialShare from "../../components/SocialShare";
 import "../CampaignDetail.css";
 import "./V2.css";
 import { SOLANA_PROGRAM_ID, SOLANA_RPC_URL, SPL_TOKEN_PROGRAM_ID, USDC } from "../../config/chains";
@@ -245,6 +246,7 @@ export default function SolanaKickstartDetailV2({ solWallet, solConnected, solAd
               <div className="meta-item"><span className="meta-label">Network</span><span className="meta-value">Solana Devnet</span></div>
             </div>
             <div className="detail-description"><h3>Despre aceasta campanie</h3><p>{campaign.description}</p></div>
+            <SocialShare title={campaign.title} description={campaign.description} />
 
             <div className="detail-progress card">
               <div className="progress-header">
