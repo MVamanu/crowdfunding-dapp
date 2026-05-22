@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ethers } from "ethers";
 import Navbar from "./components/Navbar";
+import BackToTop from "./components/BackToTop";
 import AllCampaigns from "./pages/AllCampaigns";
 import OngCampaigns from "./pages/OngCampaigns";
 import KickstartCampaigns from "./pages/KickstartCampaigns";
@@ -208,6 +209,7 @@ export default function App() {
         onConnectSolflare={connectSolflare}
         onDisconnectEth={disconnectEth} onDisconnectSol={disconnectSol}
       />
+      <BackToTop />
       <Routes>
         <Route path="/" element={<AllCampaigns solWallet={solWallet} />} />
         <Route path="/ong" element={<OngCampaigns solWallet={solWallet} />} />
