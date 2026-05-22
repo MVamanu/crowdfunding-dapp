@@ -28,3 +28,36 @@
 }
 .total-label { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); }
 .total-value { font-family: "Playfair Display", serif; font-size: 22px; font-weight: 700; color: var(--gold); }
+
+@media (max-width: 560px) {
+  .milestones-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .add-milestone-btn {
+    width: 100%;
+    padding: 11px 16px;
+  }
+
+  .milestone-item {
+    padding: 16px;
+  }
+
+  .milestone-item:hover {
+    border-color: var(--border);
+  }
+
+  .total-goal {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+  }
+
+  .total-value {
+    font-size: 20px;
+    overflow-wrap: anywhere;
+  }
+}

@@ -39,6 +39,15 @@ const ETH_ABI = [
   "function campaignCount() view returns (uint256)",
 ];
 
+function isMobileBrowser() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function openInMetaMaskMobile() {
+  const dappUrl = window.location.href.replace(/^https?:\/\//, "");
+  window.location.href = `https://metamask.app.link/dapp/${dappUrl}`;
+}
+
 export default function App() {
   const [ethConnected, setEthConnected] = useState(false);
   const [ethAddress, setEthAddress] = useState("");
@@ -91,7 +100,14 @@ export default function App() {
   }, []);
 
   async function connectEth() {
-    if (!window.ethereum) { alert("MetaMask not found!"); return; }
+    if (!window.ethereum) {
+      if (isMobileBrowser()) {
+        openInMetaMaskMobile();
+        return;
+      }
+      alert("MetaMask nu a fost gasit. Instaleaza extensia sau deschide pagina in browserul MetaMask.");
+      return;
+    }
     localStorage.removeItem("eth_disconnected");
     try {
       const metamask = window.ethereum?.providers?.find(p => p.isMetaMask) || window.ethereum;

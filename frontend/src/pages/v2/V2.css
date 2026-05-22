@@ -29,3 +29,40 @@
 .donate-helper { color: var(--text-muted); font-size: 13px; margin: -4px 0 12px; }
 .donate-mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
 .swap-quote { color: var(--navy); font-size: 12px; line-height: 1.45; margin: 10px 0; padding: 10px; border: 1px solid rgba(39,117,202,0.22); border-radius: var(--radius-lg); background: rgba(39,117,202,0.07); }
+
+@media (max-width: 560px) {
+  .v2-badge {
+    letter-spacing: 1px;
+    line-height: 1.4;
+  }
+
+  .btn-usdc {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .chain-grid,
+  .vote-actions,
+  .donate-mode-tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chain-grid,
+  .donate-mode-tabs {
+    display: grid;
+  }
+
+  .chain-option {
+    min-height: 76px;
+  }
+
+  .v2-milestone {
+    flex-direction: column;
+  }
+
+  .v2-milestone-side {
+    align-items: flex-start;
+    white-space: normal;
+  }
+}

@@ -57,3 +57,77 @@
 .network-name { flex: 1; font-size: 13px; color: var(--text-secondary); }
 .network-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 2px; background: var(--cream-dark); color: var(--text-muted); }
 .network-badge.active { background: #e8f5ee; color: var(--success); }
+
+@media (max-width: 900px) {
+  .create-page {
+    padding: 36px 0;
+  }
+
+  .create-header {
+    margin-bottom: 28px;
+  }
+
+  .create-title {
+    font-size: 32px;
+  }
+
+  .create-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .create-form {
+    padding: 24px;
+  }
+
+  .create-sidebar {
+    position: static;
+  }
+
+  .info-card {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .create-page {
+    padding: 28px 0;
+  }
+
+  .create-title {
+    font-size: 28px;
+  }
+
+  .create-desc {
+    font-size: 14px;
+  }
+
+  .create-form {
+    padding: 18px;
+  }
+
+  .form-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+  }
+
+  .form-row,
+  .chain-selector,
+  .chain-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-input {
+    font-size: 16px;
+    padding: 12px 14px;
+  }
+
+  .chain-btn,
+  .chain-option {
+    padding: 14px;
+  }
+
+  .info-card {
+    padding: 18px;
+  }
+}

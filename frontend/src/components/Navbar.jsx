@@ -6,6 +6,10 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
   const location = useLocation();
   const { version, switchVersion } = useVersion();
   const navigate = useNavigate();
+  const isMobileWithoutEthProvider =
+    typeof window !== "undefined" &&
+    !window.ethereum &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   function handleVersionSwitch(v) {
     switchVersion(v);
@@ -66,7 +70,9 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
               onClick={!ethConnected ? onConnectEth : undefined}
             >
               <span className="wallet-dot eth-dot"></span>
-              {ethConnected ? ethAddress.slice(0,6) + "..." + ethAddress.slice(-4) : "MetaMask"}
+              {ethConnected
+                ? ethAddress.slice(0,6) + "..." + ethAddress.slice(-4)
+                : isMobileWithoutEthProvider ? "MetaMask App" : "MetaMask"}
             </button>
             {ethConnected && (
               <button className="disconnect-btn" onClick={onDisconnectEth} title="Deconecteaza MetaMask">x</button>
