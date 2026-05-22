@@ -159,6 +159,23 @@ export default function KickstartCampaignsV2() {
         </div>
       </section>
 
+      <section className="trust-strip">
+        <div className="container trust-strip-inner">
+          <div>
+            <span className="trust-kicker">Milestone-uri</span>
+            <strong>Fonduri eliberate etapizat, dupa progres verificabil.</strong>
+          </div>
+          <div>
+            <span className="trust-kicker">Token</span>
+            <strong>USDC pe testnet, fara expunere la volatilitate crypto.</strong>
+          </div>
+          <div>
+            <span className="trust-kicker">Demo public</span>
+            <strong>Flux creat pentru verificare online si prezentare.</strong>
+          </div>
+        </div>
+      </section>
+
       <section className="campaigns-section">
         <div className="container">
           <div className="section-header">
@@ -234,11 +251,11 @@ export default function KickstartCampaignsV2() {
                       <div className="card-stats">
                         <div>
                           <span className="stat-value">{progress.toFixed(1)}%</span>
-                          <span className="stat-label">funded</span>
+                          <span className="stat-label">finantat</span>
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <span className="stat-value">${formatUsdc(campaign.amountRaised)}</span>
-                          <span className="stat-label">of ${formatUsdc(campaign.goal)} USDC</span>
+                          <span className="stat-label">din ${formatUsdc(campaign.goal)} USDC</span>
                         </div>
                       </div>
                       <div className="card-stats compact">
@@ -246,7 +263,7 @@ export default function KickstartCampaignsV2() {
                         <div style={{ textAlign: "right" }}><span className="stat-label">Extern ${formatUsdc(campaign.amountRaisedExternal)}</span></div>
                       </div>
                       <div className="card-owner">
-                        <span className="owner-label">by</span>
+                        <span className="owner-label">Creat de</span>
                         <span className="owner-addr">
                           {campaign.owner?.slice(0, 6)}...{campaign.owner?.slice(-4)}
                         </span>

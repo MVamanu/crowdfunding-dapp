@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import Navbar from "./components/Navbar";
 import BackToTop from "./components/BackToTop";
 import PublicFooter from "./components/PublicFooter";
+import PublicStatus from "./components/PublicStatus";
 import AllCampaigns from "./pages/AllCampaigns";
 import OngCampaigns from "./pages/OngCampaigns";
 import KickstartCampaigns from "./pages/KickstartCampaigns";
@@ -210,6 +211,7 @@ export default function App() {
         onConnectSolflare={connectSolflare}
         onDisconnectEth={disconnectEth} onDisconnectSol={disconnectSol}
       />
+      <PublicStatus />
       <BackToTop />
       <Routes>
         <Route path="/" element={<AllCampaigns solWallet={solWallet} />} />

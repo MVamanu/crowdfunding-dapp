@@ -116,7 +116,7 @@ export default function AllCampaignsV2() {
             <div className="v2-badge">v2 - USDC Cross-Chain</div>
             <h1 className="hero-title">Crowdfunding Stabil,<br/>pe ETH si SOL.</h1>
             <div className="divider"></div>
-            <p className="hero-desc">Campanii in USDC pe Ethereum si Solana. Valoare stabila, fara volatilitate crypto.</p>
+            <p className="hero-desc">Campanii in USDC pe Ethereum Sepolia si Solana Devnet. Valoare stabila, transparenta on-chain si testabila online.</p>
           </div>
           <div className="hero-stats">
             <div className="hero-stat">
@@ -133,6 +133,23 @@ export default function AllCampaignsV2() {
               <span className="hero-stat-value">2</span>
               <span className="hero-stat-label">Blockchain-uri</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="trust-strip">
+        <div className="container trust-strip-inner">
+          <div>
+            <span className="trust-kicker">Mediu public</span>
+            <strong>Live pe testnet, pregatit pentru demo si verificare.</strong>
+          </div>
+          <div>
+            <span className="trust-kicker">Contributii</span>
+            <strong>Doneaza cu MetaMask, Phantom sau Solflare.</strong>
+          </div>
+          <div>
+            <span className="trust-kicker">Retele</span>
+            <strong>Sepolia + Solana Devnet</strong>
           </div>
         </div>
       </section>
@@ -193,7 +210,7 @@ export default function AllCampaignsV2() {
                           {c.goalReached ? "Goal Atins" : c.isActive ? "Activa" : "Inchisa"}
                         </span>
                       </div>
-                      <span className="days-left">{daysLeft}d left</span>
+                      <span className="days-left">{daysLeft} zile</span>
                     </div>
                     <div className="card-body">
                       <h3 className="card-title">{c.title}</h3>
@@ -209,20 +226,20 @@ export default function AllCampaignsV2() {
                       <div className="card-stats">
                         <div>
                           <span className="stat-value">{progress.toFixed(1)}%</span>
-                          <span className="stat-label">funded</span>
+                          <span className="stat-label">finantat</span>
                         </div>
                         <div style={{textAlign:"right"}}>
                           <span className="stat-value">${raisedUSDC}</span>
-                          <span className="stat-label">of ${goalUSDC} USDC</span>
+                          <span className="stat-label">din ${goalUSDC} USDC</span>
                         </div>
                       </div>
                       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:"8px"}}>
                         <div className="card-owner">
-                          <span className="owner-label">by</span>
+                          <span className="owner-label">Creat de</span>
                           <span className="owner-addr">{c.owner?.slice(0,6)}...{c.owner?.slice(-4)}</span>
                         </div>
                         <span style={{fontSize:"11px", color:"var(--text-muted)"}}>
-                          Main: {c.mainChain?.toUpperCase()}
+                          Retea: {c.mainChain?.toUpperCase()}
                         </span>
                       </div>
                     </div>

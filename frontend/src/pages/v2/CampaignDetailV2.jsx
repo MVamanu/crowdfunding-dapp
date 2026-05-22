@@ -350,7 +350,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
                 {blockchain === "sol" ? "Solana" : "Ethereum"}
               </span>
               <span className="badge" style={{background:"rgba(39,117,202,0.1)", color:"#2775CA", border:"1px solid rgba(39,117,202,0.3)"}}>
-                Main Chain
+                Retea principala
               </span>
               <span className={`badge badge-${campaign.isActive ? "active" : "inactive"}`}>
                 {campaign.goalReached ? "Goal Atins" : campaign.isActive ? "Activa" : "Inchisa"}
@@ -362,11 +362,11 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
 
             <div className="detail-meta">
               <div className="meta-item">
-                <span className="meta-label">Owner</span>
+                <span className="meta-label">Creat de</span>
                 <span className="meta-value mono">{campaign.owner?.slice(0,8)}...{campaign.owner?.slice(-6)}</span>
               </div>
               <div className="meta-item">
-                <span className="meta-label">Main Chain</span>
+                <span className="meta-label">Retea principala</span>
                 <span className="meta-value" style={{color:chainColor, fontWeight:"600"}}>{campaign.mainChain?.toUpperCase()}</span>
               </div>
               <div className="meta-item">
@@ -407,7 +407,7 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
                 </div>
                 <div className="pstat">
                   <span className="pstat-value">${goalUSDC}</span>
-                  <span className="pstat-label">Goal</span>
+                  <span className="pstat-label">Obiectiv</span>
                 </div>
                 <div className="pstat">
                   <span className="pstat-value">{daysLeft}</span>
@@ -559,13 +559,21 @@ export default function CampaignDetailV2({ ethConnected, ethAddress, solWallet, 
             )}
 
             <div className="contract-card card">
-              <h4 className="contract-title">Contract Info</h4>
+              <h4 className="contract-title">Informatii publice</h4>
+              <div className="contract-item">
+                <span className="contract-label">Platforma</span>
+                <span className="contract-value">FundChain</span>
+              </div>
+              <div className="contract-item">
+                <span className="contract-label">Semnatura</span>
+                <span className="contract-value">Dezvoltat de VMD</span>
+              </div>
               <div className="contract-item">
                 <span className="contract-label">Token</span>
                 <span className="contract-value">USDC (6 decimale)</span>
               </div>
               <div className="contract-item">
-                <span className="contract-label">Main Chain</span>
+                <span className="contract-label">Retea</span>
                 <span className="contract-value" style={{color:chainColor}}>{campaign.mainChain?.toUpperCase()}</span>
               </div>
               <div className="contract-item">

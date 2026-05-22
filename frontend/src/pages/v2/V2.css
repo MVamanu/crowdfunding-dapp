@@ -29,6 +29,11 @@
 .donate-helper { color: var(--text-muted); font-size: 13px; margin: -4px 0 12px; }
 .donate-mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
 .swap-quote { color: var(--navy); font-size: 12px; line-height: 1.45; margin: 10px 0; padding: 10px; border: 1px solid rgba(39,117,202,0.22); border-radius: var(--radius-lg); background: rgba(39,117,202,0.07); }
+.trust-strip { background: #ffffff; border-bottom: 1px solid var(--border); }
+.trust-strip-inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding-top: 22px; padding-bottom: 22px; }
+.trust-strip-inner > div { min-height: 78px; padding: 16px; border: 1px solid rgba(39,117,202,0.16); border-radius: var(--radius-lg); background: rgba(39,117,202,0.05); }
+.trust-kicker { display: block; margin-bottom: 6px; color: #2775CA; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.trust-strip strong { display: block; color: var(--navy); font-size: 15px; line-height: 1.45; }
 
 @media (max-width: 560px) {
   .v2-badge {
@@ -64,5 +69,9 @@
   .v2-milestone-side {
     align-items: flex-start;
     white-space: normal;
+  }
+
+  .trust-strip-inner {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
