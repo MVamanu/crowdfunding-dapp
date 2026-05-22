@@ -25,12 +25,21 @@
 
 .share-primary {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: var(--navy);
   color: var(--white);
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 600;
   padding: 10px 16px;
+}
+
+.share-primary svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
 .share-primary:hover {
@@ -47,15 +56,65 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 8px 10px;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--cream);
   color: var(--navy);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-align: center;
+}
+
+.share-link svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.share-link > span[aria-hidden="true"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.share-link-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-link.whatsapp {
+  color: #128c7e;
+}
+
+.share-link.facebook {
+  color: #1877f2;
+}
+
+.share-link.linkedin {
+  color: #0a66c2;
+}
+
+.share-link.x {
+  color: #0f1419;
+}
+
+.share-link.copy {
+  color: var(--navy);
+}
+
+.share-link.copied {
+  border-color: var(--success);
+  color: var(--success);
+  background: #e8f5ee;
 }
 
 .share-link:hover {
@@ -79,6 +138,18 @@
   }
 
   .share-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .share-link {
+    flex-direction: column;
+    gap: 5px;
+    min-height: 58px;
+    padding: 8px 4px;
+  }
+
+  .share-link-label {
+    max-width: 100%;
+    font-size: 10px;
   }
 }
