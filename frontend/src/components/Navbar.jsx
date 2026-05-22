@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useVersion } from "../context/version";
+import { MetaMaskIcon, PhantomIcon, SolflareIcon } from "./WalletIcons";
 import "./Navbar.css";
 
 export default function Navbar({ ethConnected, solConnected, ethAddress, solAddress, solWalletName, onConnectEth, onConnectSol, onConnectSolflare, onDisconnectEth, onDisconnectSol }) {
@@ -69,7 +70,7 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
               className={ethConnected ? "wallet-btn connected" : "wallet-btn"}
               onClick={!ethConnected ? onConnectEth : undefined}
             >
-              <span className="wallet-dot eth-dot"></span>
+              <MetaMaskIcon />
               {ethConnected
                 ? ethAddress.slice(0,6) + "..." + ethAddress.slice(-4)
                 : isMobileWithoutEthProvider ? "MetaMask App" : "MetaMask"}
@@ -82,18 +83,18 @@ export default function Navbar({ ethConnected, solConnected, ethAddress, solAddr
           {!solConnected ? (
             <div className="sol-wallet-group">
               <button className="wallet-btn" onClick={onConnectSol}>
-                <span className="wallet-dot sol-dot"></span>
+                <PhantomIcon />
                 Phantom
               </button>
               <button className="wallet-btn solflare-btn" onClick={onConnectSolflare}>
-                <span className="wallet-dot solflare-dot"></span>
+                <SolflareIcon />
                 Solflare
               </button>
             </div>
           ) : (
             <div className="wallet-btn-group">
               <button className="wallet-btn connected">
-                <span className="wallet-dot sol-dot"></span>
+                {solWalletName === "Solflare" ? <SolflareIcon /> : <PhantomIcon />}
                 {solWalletName}: {solAddress.slice(0,4)}...{solAddress.slice(-4)}
               </button>
               <button className="disconnect-btn" onClick={onDisconnectSol} title="Deconecteaza Solana">x</button>

@@ -62,6 +62,11 @@
 .eth-dot { background: #627eea; }
 .sol-dot { background: #9945ff; }
 .wallet-btn.connected .wallet-dot { background: var(--gold); }
+.wallet-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
 
 .sol-wallet-group { display: flex; gap: 6px; }
 .solflare-btn { }
