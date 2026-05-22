@@ -1,0 +1,37 @@
+## 3.1. Solidity, Hardhat și rețeaua Ethereum Sepolia
+
+Componenta Ethereum a aplicației FundChain este construită în jurul contractelor inteligente scrise în Solidity și testate/deployate cu ajutorul mediului Hardhat. Alegerea acestui stack este justificată de maturitatea ecosistemului Ethereum, de suportul extins pentru dezvoltatori și de compatibilitatea cu instrumente utilizate frecvent în aplicațiile Web3. În cadrul proiectului, Ethereum este folosit atât pentru campanii simple, cât și pentru campanii cu milestone-uri, mecanisme cross-chain și funcționalități v2 bazate pe USDC.
+
+Solidity este limbajul principal utilizat pentru dezvoltarea contractelor inteligente pe Ethereum. Documentația oficială îl descrie ca un limbaj de nivel înalt, orientat pe obiecte, destinat implementării smart contracts care rulează pe Ethereum Virtual Machine. Contractele scrise în Solidity conțin atât funcții, cât și stare persistentă, iar după deploy devin accesibile la o adresă de contract pe blockchain. Această caracteristică este importantă pentru FundChain, deoarece fiecare contract Ethereum gestionează reguli financiare care trebuie să fie executate transparent și predictibil.
+
+În proiectul FundChain, Solidity este utilizat pentru mai multe contracte, fiecare acoperind o etapă funcțională a aplicației. Contractul `Crowdfunding` gestionează campanii simple, donații și retragerea fondurilor după atingerea obiectivului. Contractul `CrowdfundingMilestone` extinde acest model prin introducerea milestone-urilor și a votului donatorilor. Contractele `CrowdfundingUnified` și `CrowdfundingCrossMilestone` adaugă logica necesară pentru scenarii cross-chain, iar contractele `CrowdfundingStableV2` și `CrowdfundingStableMilestoneV2` introduc campanii cu obiective exprimate în USDC.
+
+Un avantaj al Solidity este apropierea sa de modelul de execuție Ethereum. Contractele pot defini structuri de date pentru campanii, mapping-uri pentru donații, evenimente pentru activități relevante și reguli de acces pentru operații sensibile. În FundChain, aceste mecanisme sunt folosite pentru a păstra informații despre creator, titlu, descriere, obiectiv, sumă strânsă, statusul campaniei, milestone-uri și voturi. Evenimentele emise de contracte permit frontend-ului și instrumentelor externe să urmărească acțiunile importante, precum crearea unei campanii sau realizarea unei donații.
+
+Versiunea Solidity utilizată în proiect aparține familiei 0.8.x, care include verificări implicite pentru overflow și underflow aritmetic. Acest aspect este relevant pentru o aplicație financiară, deoarece contractele gestionează sume, contribuții și praguri. Chiar dacă aceste protecții nu elimină toate riscurile de securitate, ele reduc o clasă importantă de erori care în versiunile mai vechi necesitau biblioteci suplimentare sau verificări manuale. În plus, folosirea tipurilor numerice explicite, a condițiilor `require` și a verificărilor de stare contribuie la comportamentul predictibil al contractelor.
+
+Hardhat este mediul de dezvoltare utilizat pentru partea Ethereum a aplicației. Documentația Hardhat îl prezintă ca un development environment pentru Ethereum, oferind instrumente pentru compilarea contractelor, rularea testelor, debugging și deployment. În FundChain, Hardhat este util deoarece permite organizarea contractelor, configurarea rețelelor, generarea artifactelor și rularea scenariilor de testare înainte de deploy. Acest lucru este esențial într-un proiect cu mai multe contracte și fluxuri funcționale.
+
+Prin Hardhat, contractele sunt compilate din Solidity în bytecode executabil de EVM și ABI-uri folosite de frontend. ABI-ul reprezintă interfața prin care aplicația web poate apela funcțiile contractului și poate interpreta datele returnate. În FundChain, frontend-ul React folosește aceste ABI-uri împreună cu biblioteca ethers.js pentru a interacționa cu contractele deployate. Astfel, utilizatorul poate crea campanii, dona, vota milestone-uri sau urmări progresul fără să interacționeze direct cu bytecode-ul contractului.
+
+Rețeaua Sepolia este utilizată ca testnet Ethereum pentru validarea contractelor în condiții apropiate de mainnet, dar fără folosirea de fonduri reale. Testnet-urile permit dezvoltatorilor să deployeze contracte, să testeze tranzacții și să verifice integrarea cu wallet-uri și exploratoare de blocuri. În cadrul lucrării, Sepolia este potrivită deoarece oferă un mediu public, accesibil prin RPC, în care se pot testa contractele și interacțiunea cu MetaMask. De asemenea, adresele contractelor deployate pot fi consultate prin Etherscan pentru verificare și trasabilitate.
+
+Utilizarea Sepolia are un rol metodologic important. Testele locale validează logica contractelor într-un mediu controlat, dar deploy-ul pe testnet verifică și aspecte operaționale: semnarea tranzacțiilor prin wallet, costul gas-ului, confirmarea tranzacțiilor, citirea datelor din blockchain și interacțiunea frontend-contract. Pentru o aplicație precum FundChain, aceste verificări sunt necesare deoarece experiența finală a utilizatorului depinde de colaborarea dintre contract, wallet, RPC și interfața web.
+
+Biblioteca ethers.js este folosită în frontend pentru interacțiunea cu Ethereum. Documentația ethers.js o descrie ca o bibliotecă compactă pentru interacțiunea cu blockchain-ul Ethereum și ecosistemul său. În aplicație, ethers.js permite conectarea la provider-ul expus de MetaMask, obținerea signer-ului utilizatorului, instanțierea contractelor pe baza ABI-ului și trimiterea tranzacțiilor. Prin această bibliotecă, operațiile definite în Solidity devin accesibile din interfața React.
+
+În fluxurile v2, componenta Ethereum are și rolul de a susține donațiile stabile în USDC. USDC este tratat ca token ERC-20, iar contractele v2 folosesc mecanisme de aprobare și transfer pentru a înregistra donațiile. Pentru donațiile pornite din ETH, integrarea cu Uniswap permite conversia către USDC în cadrul fluxului de donație. Această funcționalitate arată modul în care contractele FundChain pot interacționa cu infrastructura DeFi existentă pentru a transforma o donație volatilă într-o valoare stabilă.
+
+Din punct de vedere arhitectural, partea Ethereum oferă aplicației un model matur și expresiv pentru definirea regulilor de crowdfunding. Contractele inteligente păstrează starea campaniilor, validează condițiile de donație și retragere, controlează milestone-urile și pot comunica evenimente către frontend. Hardhat susține ciclul de dezvoltare, iar Sepolia permite verificarea în rețea publică de test. Împreună, aceste tehnologii formează baza componentei Ethereum a platformei FundChain.
+
+Totuși, utilizarea Ethereum implică și anumite constrângeri. Fiecare tranzacție necesită gas, iar interacțiunea cu contractele depinde de disponibilitatea rețelei, de RPC și de wallet-ul utilizatorului. În plus, operațiile complexe pot deveni costisitoare pe mainnet. Aceste limitări justifică explorarea unei arhitecturi multi-chain, în care Solana este folosită ca al doilea ecosistem pentru implementarea unor fluxuri similare. Această componentă este prezentată în subcapitolul următor.
+
+Surse utilizate în redactarea subcapitolului:
+
+- Solidity Documentation. Solidity programming language.
+- Solidity Documentation. Introduction to Smart Contracts.
+- Hardhat Documentation. Ethereum development environment.
+- Ethereum Foundation. Ethereum developer documentation.
+- MetaMask Help Center. ETH on Sepolia and testnets.
+- ethers.js Documentation.
+- Documentația proprie a aplicației FundChain, README.md.

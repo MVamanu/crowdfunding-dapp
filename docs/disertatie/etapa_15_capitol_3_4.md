@@ -1,0 +1,42 @@
+## 3.4. MetaMask, Phantom și Solflare
+
+Wallet-urile Web3 au un rol esențial în aplicația FundChain, deoarece reprezintă punctul de legătură dintre utilizator și blockchain. Într-o aplicație clasică, autentificarea se realizează de obicei prin cont, parolă sau furnizor extern de identitate. Într-o aplicație descentralizată, utilizatorul interacționează printr-un portofel digital care deține cheile private și semnează tranzacțiile. Astfel, wallet-ul nu este doar un instrument de conectare, ci și mecanismul prin care utilizatorul autorizează operații on-chain.
+
+În FundChain sunt integrate trei wallet-uri principale: MetaMask pentru Ethereum, Phantom pentru Solana și Solflare ca alternativă Solana. Această alegere corespunde arhitecturii multi-chain a aplicației. Ethereum Sepolia este accesat prin MetaMask, iar Solana Devnet este accesată prin Phantom sau Solflare. Interfața aplicației încearcă să prezinte aceste opțiuni într-un mod unitar, deși fiecare ecosistem are propriul standard de adresare, semnare și transmitere a tranzacțiilor.
+
+MetaMask este unul dintre cele mai utilizate wallet-uri pentru Ethereum și rețele compatibile EVM. Documentația MetaMask descrie provider-ul injectat în browser ca punctul prin care aplicațiile web pot solicita conectarea conturilor, pot citi adresa utilizatorului și pot cere semnarea tranzacțiilor. În FundChain, conectarea MetaMask se realizează prin obiectul `window.ethereum`, iar aplicația folosește ethers.js pentru a construi un `BrowserProvider`, pentru a obține signer-ul și pentru a instanția contractele Ethereum.
+
+Fluxul de conectare Ethereum începe prin verificarea existenței provider-ului MetaMask. Dacă acesta este disponibil, aplicația solicită conturile utilizatorului prin metoda `eth_requestAccounts`. După conectare, aplicația comută rețeaua către Sepolia folosind chain ID-ul `0xaa36a7`. Această etapă este importantă deoarece contractele FundChain sunt deployate pe Sepolia, iar o tranzacție trimisă pe o altă rețea nu ar interacționa cu adresele corecte.
+
+După conectarea MetaMask, aplicația păstrează în stare adresa Ethereum, contractul instanțiat și statusul conexiunii. Utilizatorul poate crea campanii, dona, aproba tokenuri USDC, vota milestone-uri sau retrage fonduri. Fiecare operație care modifică starea blockchain-ului trebuie confirmată în MetaMask. Astfel, aplicația nu poate executa tranzacții în numele utilizatorului fără aprobarea acestuia. Această proprietate este esențială pentru securitatea aplicațiilor Web3.
+
+Phantom este wallet-ul folosit pentru interacțiunea cu Solana. Documentația Phantom pentru dezvoltatori descrie modul în care aplicațiile pot conecta wallet-ul, pot obține cheia publică a utilizatorului și pot solicita semnarea tranzacțiilor. În FundChain, Phantom este accesat prin `window.solana`, iar aplicația verifică proprietatea `isPhantom` pentru a identifica wallet-ul. După conectare, cheia publică este salvată și transmisă componentelor care au nevoie de interacțiune cu programul Solana.
+
+Solflare este integrat ca alternativă pentru utilizatorii Solana. Similar cu Phantom, Solflare oferă o interfață prin care aplicația poate cere conectarea, poate citi cheia publică și poate semna tranzacții. În FundChain, conectarea Solflare se face prin `window.solflare`, iar aplicația păstrează numele wallet-ului conectat pentru afișare în interfață. Integrarea mai multor wallet-uri Solana este utilă deoarece utilizatorii pot avea preferințe diferite, iar aplicația nu trebuie să depindă de un singur portofel.
+
+Diferența dintre wallet-urile Ethereum și Solana se observă în modul de interacțiune. În Ethereum, MetaMask expune un provider compatibil EIP-1193, iar ethers.js abstractizează multe detalii prin `Provider`, `Signer` și `Contract`. În Solana, wallet-ul furnizează o cheie publică și metode de semnare, iar aplicația trebuie să construiască tranzacții care includ explicit programul, conturile și instrucțiunile. Anchor simplifică această interacțiune, dar frontend-ul trebuie în continuare să derive PDA-uri și să transmită conturile necesare.
+
+În aplicația FundChain, conectarea wallet-urilor este gestionată centralizat în componenta principală `App.jsx`. Pentru Ethereum, aplicația verifică `window.ethereum`, solicită conturile și construiește contractul principal. Pentru Solana, aplicația permite conectarea fie prin Phantom, fie prin Solflare, apoi salvează wallet-ul și cheia publică. Aceste valori sunt transmise prin props către paginile care au nevoie de ele. Această abordare simplifică utilizarea wallet-urilor în restul aplicației.
+
+Aplicația implementează și un mecanism de auto-connect controlat. Pentru Ethereum, se folosește metoda `eth_accounts`, care verifică dacă există conturi deja autorizate fără a deschide automat popup-ul MetaMask. Pentru Solana, aplicația verifică ultimul wallet conectat și încearcă să refacă starea doar dacă utilizatorul nu a ales anterior deconectarea. Aceste verificări sunt completate prin valori stocate în `localStorage`, precum `eth_disconnected`, `sol_disconnected` și `sol_last_wallet`.
+
+Acest mecanism îmbunătățește experiența utilizatorului. Dacă utilizatorul a conectat deja wallet-ul, aplicația poate reveni într-o stare conectată fără a cere repetat confirmări. În același timp, dacă utilizatorul s-a deconectat voluntar, aplicația respectă această alegere și nu reconectează automat wallet-ul. Astfel, se păstrează un echilibru între confort și control.
+
+Componenta `ConnectWalletModal` oferă utilizatorului o alegere vizuală între MetaMask, Phantom și Solflare. Fiecare opțiune este asociată cu rețeaua corespunzătoare: Ethereum Sepolia pentru MetaMask și Solana Devnet pentru Phantom/Solflare. Acest lucru este important deoarece aplicația are fluxuri în care utilizatorul poate dona dintr-un ecosistem sau din altul. Modalul reduce ambiguitatea și ajută utilizatorul să înțeleagă ce wallet trebuie conectat pentru operația dorită.
+
+În fluxurile cross-chain și v2, wallet-urile devin și mai importante. O campanie poate avea main chain Ethereum sau Solana și poate accepta donații din ambele ecosisteme. Pentru donațiile Ethereum, utilizatorul are nevoie de MetaMask. Pentru donațiile Solana, are nevoie de Phantom sau Solflare. În campaniile v2, wallet-ul determină și ce solduri pot fi citite: USDC ERC-20 pe Ethereum sau USDC SPL pe Solana. Interfața trebuie să afișeze corect aceste diferențe fără a confunda utilizatorul.
+
+Din punct de vedere al securității, wallet-ul păstrează cheia privată în afara aplicației. FundChain nu stochează chei private și nu poate semna tranzacții fără aprobarea wallet-ului. Aplicația construiește intenția tranzacției, iar wallet-ul o prezintă utilizatorului pentru confirmare. Această separare este fundamentală în aplicațiile Web3 și reduce riscul ca aplicația să controleze direct fondurile utilizatorului. Totuși, utilizatorul trebuie să verifice mesajele și tranzacțiile pe care le semnează, deoarece semnătura sa autorizează acțiuni reale pe blockchain.
+
+Integrarea mai multor wallet-uri aduce și provocări. Fiecare wallet poate avea comportamente diferite, mesaje diferite pentru utilizator și moduri diferite de gestionare a conexiunii. De asemenea, aplicația trebuie să trateze situații precum wallet lipsă, rețea incorectă, deconectare, refuzul semnării, sold insuficient sau tranzacție eșuată. În FundChain, aceste situații sunt tratate prin verificări, mesaje de eroare și dezactivarea anumitor butoane atunci când condițiile nu sunt îndeplinite.
+
+Prin MetaMask, Phantom și Solflare, aplicația FundChain oferă acces la cele două ecosisteme blockchain integrate. Wallet-urile permit autentificarea prin adresă publică, semnarea tranzacțiilor și controlul fondurilor de către utilizator. În același timp, ele introduc cerințe de proiectare pentru frontend: conectare clară, afișare a stării wallet-ului, tratarea erorilor și diferențierea între Ethereum și Solana. Aceste aspecte sunt esențiale pentru funcționarea unei aplicații de crowdfunding cross-chain.
+
+Surse utilizate în redactarea subcapitolului:
+
+- MetaMask Documentation. Provider API.
+- Phantom Developer Documentation. Connecting to Phantom.
+- Solflare Documentation. Solana wallet integration.
+- Solana Wallet Adapter Documentation.
+- Documentația proprie a aplicației FundChain, README.md.
+- Codul frontend al aplicației FundChain, `frontend/src/App.jsx` și `frontend/src/components/ConnectWalletModal.jsx`.
