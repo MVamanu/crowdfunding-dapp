@@ -94,7 +94,7 @@
 
 @media (max-width: 820px) {
   .all-campaigns-page .hero {
-    padding: 48px 0 36px;
+    padding: 36px 0 28px;
   }
 
   .all-campaigns-page .hero .container {
@@ -126,9 +126,21 @@
   .all-campaigns-page .campaigns-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .all-campaigns-page .section-header {
+    margin-bottom: 28px;
+  }
+
+  .all-campaigns-page .section-title {
+    font-size: 30px;
+  }
 }
 
 @media (max-width: 420px) {
+  .all-campaigns-page .campaigns-section {
+    padding: 44px 0;
+  }
+
   .all-campaigns-page .hero-title {
     font-size: 32px;
   }
@@ -138,8 +150,44 @@
     flex-direction: column;
   }
 
+  .all-campaigns-page .hero-stat-value {
+    font-size: 24px;
+  }
+
+  .all-campaigns-page .hero-stat-label {
+    font-size: 11px;
+  }
+
   .all-campaigns-page .hero-stat-divider {
     width: 100%;
     height: 1px;
+  }
+
+  .all-campaigns-page .section-title {
+    font-size: 28px;
+    line-height: 1.12;
+  }
+
+  .filters-wrap {
+    width: 100%;
+  }
+
+  .all-campaigns-page .filter-tabs,
+  .filter-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 4px;
+    overflow: visible;
+  }
+
+  .all-campaigns-page .filter-tab,
+  .filter-tab {
+    min-width: 0;
+    padding: 9px 8px;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
