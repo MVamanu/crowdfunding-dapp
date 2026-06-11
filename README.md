@@ -245,4 +245,4 @@ Directoarele `disertatie_work/`, `disertatie_audit/`, `docx_render_review/` si `
 
 ## Licenta
 
-Fisierul `LICENSE` nu este prezent in starea curenta a repository-ului. Daca proiectul trebuie publicat, adauga explicit licenta dorita si actualizeaza aceasta sectiune.
+MIT License - vezi fisierul `LICENSE`.
