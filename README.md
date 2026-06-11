@@ -1,130 +1,112 @@
-# FundChain — Platformă Cross-Chain de Crowdfunding
+# FundChain - Cross-chain Crowdfunding DApp
 
-> Lucrare de licență — Universitatea Spiru Haret București  
-> Student: Marian Dumitru Vamanu  
-> Coordonator: Conf. Univ. Dr. Marius Iulian Mihailescu
+> Proiect de disertatie: platforma descentralizata de crowdfunding pe Ethereum Sepolia si Solana Devnet.
 
-[![Ethereum](https://img.shields.io/badge/Ethereum-Sepolia-627EEA?logo=ethereum)](https://sepolia.etherscan.io)
-[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF?logo=solana)](https://explorer.solana.com/?cluster=devnet)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636?logo=solidity)](https://soliditylang.org)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+FundChain combina smart contracts Ethereum, un program Anchor pe Solana si un frontend React/Vite pentru campanii de finantare simple, cu milestone-uri si cu donatii cross-chain. Versiunea curenta include si fluxuri USDC, swap ETH -> USDC prin Uniswap pe Sepolia si interfete V2 pentru campanii simple si Kickstart.
 
----
+## Status curent
 
-## Descriere
+- Frontend React 19 + Vite, cu rute clasice si rute `/v2`.
+- Conectare wallet: MetaMask pentru Ethereum, Phantom si Solflare pentru Solana.
+- Ethereum Sepolia: contracte pentru ETH, milestone, cross-chain, USDC, USDC V2 si USDC milestone.
+- Solana Devnet: program Anchor pentru campanii SOL, campanii USDC si milestone-uri.
+- Preturi si conversii: CoinGecko pentru afisare USD, Uniswap Sepolia pentru estimare/swap ETH -> USDC.
+- Teste automate: suite Hardhat pentru contractele Ethereum si teste Anchor/ts-mocha pentru programul Solana.
 
-**FundChain** este o platformă descentralizată de crowdfunding care operează simultan pe blockchain-urile **Ethereum** și **Solana**. Spre deosebire de platformele centralizate existente (Kickstarter, Indiegogo), FundChain elimină intermediarii prin utilizarea smart contracts, asigurând transparență completă și control al fondurilor direct pe blockchain.
+## Arhitectura
 
-### Caracteristici principale
-
-- **Campanii simple** — strangere de fonduri ETH sau SOL cu goal definit
-- **Milestone funding** — fondurile sunt eliberate etapizat după aprobarea prin vot a fiecărei etape
-- **Cross-chain** — campanii care acceptă donații atât în ETH cât și în SOL, cu goal unificat în USD
-- **Vot proporțional** — puterea de vot este proporțională cu suma donată (1 wei = 1 vot)
-- **Pricing USD** — toate campaniile afișează valorile în USD în timp real (CoinGecko API)
-- **Multi-wallet** — suport pentru MetaMask, Phantom și Solflare cu auto-reconnect
-
----
-
-## Arhitectură
-
-```
-┌─────────────────────────────────────────────────────┐
-│              Frontend — React + Vite                 │
-│   Campanii · ONG/Fundatii · Kickstart (Milestone)   │
-├──────────────┬──────────────────────────────────────┤
-│  ethers.js   │         @coral-xyz/anchor             │
-│  Alchemy RPC │         Solana Web3.js                │
-├──────────────┴──────────────────────────────────────┤
-│    Ethereum Sepolia    │      Solana Devnet          │
-│  4 Smart Contracts     │   1 Anchor Program          │
-└────────────────────────┴─────────────────────────────┘
+```text
+crowdfunding-dapp/
+|-- frontend/                 React + Vite DApp
+|   |-- src/pages/             fluxuri clasice
+|   |-- src/pages/v2/          fluxuri V2
+|   |-- src/components/        navigatie, wallet modal, cards
+|   |-- src/config/chains.js   RPC-uri, adrese contracte, mint-uri
+|   `-- src/hooks/             preturi crypto, program Solana
+|
+|-- ethereum/                  Hardhat 3 + Solidity
+|   |-- contracts/             contracte principale si mock-uri
+|   |-- test/                  teste automate
+|   |-- ignition/modules/      module deployment
+|   `-- migration-reports/     rapoarte deploy/migrare V2
+|
+|-- solana/crowdfunding/       Anchor program
+|   |-- programs/crowdfunding/src/lib.rs
+|   `-- tests/crowdfunding.ts
+|
+|-- disertatie_work/           materiale si exporturi pentru lucrare
+|-- disertatie_audit/          audit, imagini si scripturi pentru lucrare
+`-- tools/                     utilitare pentru documente
 ```
 
----
+## Functionalitati principale
 
-## Contracte Deployate
+- Campanii simple ETH si SOL, cu creare, donatie, retragere si refund.
+- Campanii cu milestone-uri, in care fondurile se elibereaza etapizat dupa votul donatorilor.
+- Vot proportional cu suma donata.
+- Campanii cross-chain cu goal exprimat in USD.
+- Campanii USDC pe Ethereum si Solana.
+- Campanii V2 cu `mainChain`, `solanaId`, donatii externe si tracking cross-chain.
+- Donatii ETH convertite in USDC prin Uniswap pentru fluxurile V2.
+- Cache local pentru campanii si rehidratare in frontend.
 
-### Ethereum — Sepolia Testnet
+## Contracte si programe
 
-| Contract | Adresă | Descriere |
-|----------|--------|-----------|
-| `Crowdfunding` | [`0x53EF...5770`](https://sepolia.etherscan.io/address/0x53EF55468DF1570952b7A07eF46926c3837e5770) | Campanie simplă ETH |
-| `CrowdfundingMilestone` | [`0x50B8...1A4E`](https://sepolia.etherscan.io/address/0x50B8de29C8226a85c99b9679060A30a180277a1E) | Milestone cu vot proporțional |
-| `CrowdfundingUnified` | [`0x4C6b...6a5e`](https://sepolia.etherscan.io/address/0x4C6b83E06c9B7f83a029312eA9E3E00E7CBC6a5e) | Goal în USD, cross-chain simplu |
-| `CrowdfundingCrossMilestone` | [`0x9613...A4E`](https://sepolia.etherscan.io/address/0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E) | Cross-chain cu milestone-uri |
+### Ethereum Sepolia
 
-### Solana — Devnet
+Adresele implicite sunt definite in `frontend/src/config/chains.js` si pot fi suprascrise prin `.env`.
 
-| Componentă | Adresă |
-|-----------|--------|
+| Componenta | Adresa implicita | Rol |
+| --- | --- | --- |
+| `Crowdfunding` | `0x53EF55468DF1570952b7A07eF46926c3837e5770` | Campanii simple ETH |
+| `CrowdfundingMilestone` | `0x50B8de29C8226a85c99b9679060A30a180277a1E` | Milestone-uri ETH |
+| `CrowdfundingUnified` | `0x4C6b83E06c9B7f83a029312eA9E3E00E7CBC6a5e` | Campanii cross-chain simple |
+| `CrowdfundingCrossMilestone` | `0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E` | Cross-chain cu milestone-uri |
+| `CrowdfundingStable` | `0x8FA441B88BC346427E34baf5B1b1E09ed1700f3c` | Campanii USDC |
+| `CrowdfundingStableV2` | `0xE3Ae8c1BF26e6bAfe7EDc5143Cd288B9DF4C1e40` | USDC V2, donatii ETH swap si legatura Solana |
+| `CrowdfundingStableMilestoneV2` | `0xB0c5218ef966c6EBfEedE21909595cC327267998` | USDC cross-chain cu milestone-uri |
+| USDC Sepolia | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | Token USDC testnet |
+| Uniswap SwapRouter02 | `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E` | Swap ETH -> USDC |
+| Uniswap QuoterV2 | `0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3` | Estimare swap |
+
+### Solana Devnet
+
+| Componenta | Valoare |
+| --- | --- |
 | Program ID | `9Q26M3XJE9pveumjKK4VxMfBu8EQXPnqHHTNXfSU5kEi` |
-| IDL Account | `BnyoyxFzT1F81969wmnw4Z83rT6Kzxh8vzBMqkimadov` |
+| Cluster implicit frontend | `devnet` |
+| USDC Devnet mint | `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` |
+| SPL Token Program | `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` |
+| Associated Token Program | `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL` |
 
----
+Programul Anchor implementeaza:
 
-## Stack Tehnologic
+- `create_campaign`, `donate`, `withdraw`
+- `create_milestone_campaign`, `donate_milestone`, `submit_milestone`, `vote_milestone`, `finalize_milestone`
+- `create_usdc_campaign`, `donate_usdc`, `withdraw_usdc`
+- `create_usdc_milestone_campaign`, `donate_usdc_milestone`, `submit_usdc_milestone`, `vote_usdc_milestone`, `finalize_usdc_milestone`
 
-### Smart Contracts — Ethereum
-- **Solidity** 0.8.28 (protecție overflow built-in)
-- **Hardhat** 3.x — compilare, testare, deploy
-- **Hardhat Ignition** — deployment declarativ
-- **Pattern** Checks-Effects-Interactions (protecție reentrancy)
+## Stack tehnologic
 
-### Program On-Chain — Solana
-- **Rust** 1.95 + **Anchor** 0.31.1
-- **PDA** (Program Derived Addresses) pentru donor/vote records
-- Feature `init-if-needed` pentru conturi existente
+- Frontend: React 19, Vite 8, React Router 7, TanStack Query, ethers v6.
+- Solana frontend: `@solana/web3.js`, wallet adapters, `@coral-xyz/anchor`.
+- Ethereum: Solidity 0.8.28, Hardhat 3, Hardhat Ignition, viem.
+- Solana program: Rust + Anchor 0.31.1.
+- Token/DeFi: USDC testnet, SPL Token, Uniswap Sepolia.
 
-### Frontend
-- **React** 19 + **Vite** — interfață utilizator
-- **ethers.js** v6 — interacțiune cu Ethereum
-- **@coral-xyz/anchor** 0.32.x în frontend / 0.31.1 pentru programul Anchor — interacțiune cu Solana
-- **CoinGecko API** — prețuri ETH/SOL în timp real
+## Cerinte locale
 
----
-
-## Instalare și Rulare
-
-### Cerințe
-
-- Node.js 20 LTS
+- Node.js 20+
+- npm si/sau yarn
 - Git
-- Rust + Cargo (pentru Solana)
-- Solana CLI 3.x
+- Rust + Cargo
+- Solana CLI
 - Anchor CLI 0.31.1
+- Wallet-uri de test: MetaMask, Phantom si/sau Solflare
 
-### 1. Clonare repository
+## Instalare
 
-```bash
-git clone https://github.com/MVamanu/crowdfunding-dapp.git
-cd crowdfunding-dapp
-```
-
-### 2. Ethereum — Compilare și testare
-
-```bash
-cd ethereum
-npm install
-npx hardhat compile
-npx hardhat test
-```
-
-### 3. Solana — Compilare și deploy
-
-```bash
-cd solana/crowdfunding
-
-# Setare variabile de mediu
-$env:ANCHOR_PROVIDER_URL = "https://api.devnet.solana.com"
-$env:ANCHOR_WALLET = "C:\Users\<user>\.config\solana\id.json"
-
-anchor build
-anchor deploy --provider.cluster devnet
-```
-
-### 4. Frontend
+### 1. Frontend
 
 ```bash
 cd frontend
@@ -133,127 +115,134 @@ copy .env.example .env
 npm run dev
 ```
 
-Aplicația va fi disponibilă la `http://localhost:5173`
+Aplicatia ruleaza implicit la `http://localhost:5173`.
 
----
-
-## Structura Proiectului
-
-```
-crowdfunding-dapp/
-├── ethereum/
-│   ├── contracts/
-│   │   ├── Crowdfunding.sol              # Campanie simplă ETH
-│   │   ├── CrowdfundingMilestone.sol     # Milestone cu vot
-│   │   ├── CrowdfundingUnified.sol       # Cross-chain simplu
-│   │   └── CrowdfundingCrossMilestone.sol # Cross-chain milestone
-│   ├── test/                             # 30 teste automate
-│   └── ignition/modules/                 # Deploy modules
-│
-├── solana/crowdfunding/
-│   └── programs/crowdfunding/src/
-│       └── lib.rs                        # Program Anchor (campanie + milestone)
-│
-└── frontend/src/
-    ├── pages/
-    │   ├── AllCampaigns.jsx              # Feed unificat toate campaniile
-    │   ├── OngCampaigns.jsx              # Campanii simple ONG
-    │   ├── KickstartCampaigns.jsx        # Campanii milestone
-    │   ├── CampaignDetail.jsx            # Detalii ETH/SOL simplu
-    │   ├── MilestoneCampaignDetail.jsx   # Detalii milestone ETH
-    │   ├── SolanaMilestoneCampaignDetail.jsx # Detalii milestone SOL
-    │   ├── UnifiedCampaignDetail.jsx     # Detalii cross-chain simplu
-    │   └── CrossMilestoneDetail.jsx      # Detalii cross-chain milestone
-    ├── components/
-    │   ├── Navbar.jsx                    # Navigare + wallet connect
-    │   └── ConnectWalletModal.jsx        # Modal conectare wallet
-    └── hooks/
-        └── useCryptoPrices.js            # Prețuri live ETH/SOL
-```
-
----
-
-## Testare
+### 2. Ethereum
 
 ```bash
 cd ethereum
-npx hardhat test
+npm install
+copy .env.example .env
+npx hardhat compile
+npm test
 ```
 
-**30 teste automate** acoperind:
+Pentru deploy pe Sepolia, seteaza in `ethereum/.env`:
 
-| Modul | Teste |
-|-------|-------|
-| `Crowdfunding` | createCampaign, donate, withdraw, refund |
-| `CrowdfundingMilestone` | create, donate, submitMilestone, vote, finalize |
-| `CrowdfundingUnified` | create, donate, withdraw |
-| `CrowdfundingCrossMilestone` | create, donateETH, recordSolDonation, vote |
-
----
-
-## Securitate
-
-Contractele implementează măsuri de securitate conform standardelor industriei:
-
-| Vulnerabilitate | Protecție implementată |
-|----------------|------------------------|
-| **Reentrancy** | Pattern Checks-Effects-Interactions în toate funcțiile de transfer |
-| **Overflow/Underflow** | Solidity 0.8.28 cu verificări built-in (înlocuiește SafeMath) |
-| **Access Control** | Modifier `onlyOwner` pe funcțiile critice (withdraw, submitMilestone) |
-| **Double voting** | Mapping `hasVoted[campaignId][milestoneId][address]` |
-| **Expired campaigns** | Verificare `block.timestamp` înainte de acceptarea donațiilor |
-
----
-
-## Fluxuri Principale
-
-### Campanie simplă
-```
-createCampaign() → donate() → [goalReached] → withdraw()
-                                             → [expired] → refund()
+```text
+SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+SEPOLIA_PRIVATE_KEY=
 ```
 
-### Campanie cu Milestone
-```
-createCampaign() → donate() → [goalReached] → submitMilestone()
-                                             → vote() (donatori)
-                                             → finalizeMilestone()
-                                             → [approved] → transfer ETH/SOL
-                                             → [rejected] → retry
+Exemplu deploy cu Ignition:
+
+```bash
+npx hardhat ignition deploy --network sepolia ignition/modules/CrowdfundingStableV2.ts
 ```
 
-### Campanie Cross-Chain
+### 3. Solana
+
+```bash
+cd solana/crowdfunding
+npm install
+anchor build
+anchor test
 ```
-createCampaign(ETH + solanaAddress) →
-  donateETH()        # donatori Ethereum
-  donate SOL direct  # donatori Solana → recordSolDonation() înregistrează USD
-  → submitMilestone() → vote() (donatori ETH) → finalizeMilestone()
+
+Pentru Devnet:
+
+```bash
+solana config set --url https://api.devnet.solana.com
+anchor deploy --provider.cluster devnet
 ```
 
----
+## Variabile frontend
 
-## Baze tehnice
+`frontend/.env.example` contine valorile active folosite de aplicatie:
 
-Acest proiect se bazează pe experiența acumulată în dezvoltarea aplicației [Crypto Wallet](https://crypto-wallet-psi.vercel.app) — o aplicație web pentru gestionarea portofelelor Ethereum, care a constituit fundamentul tehnic pentru implementarea mecanismelor de interacțiune cu blockchain-ul în cadrul FundChain.
+```text
+VITE_SEPOLIA_RPC_URL=
+VITE_SOLANA_CLUSTER=devnet
+VITE_SOLANA_RPC_URL=
+VITE_ETH_CONTRACT_ADDRESS=
+VITE_ETH_MILESTONE_CONTRACT_ADDRESS=
+VITE_ETH_UNIFIED_CONTRACT_ADDRESS=
+VITE_ETH_CROSS_MILESTONE_CONTRACT_ADDRESS=
+VITE_ETH_STABLE_CONTRACT_ADDRESS=
+VITE_ETH_STABLE_V2_CONTRACT_ADDRESS=
+VITE_ETH_STABLE_MILESTONE_CONTRACT_ADDRESS=
+VITE_USDC_SEPOLIA_ADDRESS=
+VITE_UNISWAP_SEPOLIA_SWAP_ROUTER_02=
+VITE_UNISWAP_SEPOLIA_QUOTER_V2=
+VITE_UNISWAP_SEPOLIA_WETH=
+VITE_UNISWAP_SEPOLIA_WETH_USDC_FEE=3000
+VITE_USDC_SOLANA_DEVNET_MINT=
+VITE_SOLANA_PROGRAM_ID=
+```
 
----
+Daca o variabila lipseste, frontend-ul foloseste fallback-urile din `frontend/src/config/chains.js`.
 
-## Bibliografie
+## Rute frontend
 
-1. Buterin, V. (2014). *A Next-Generation Smart Contract and Decentralized Application Platform*. Ethereum Foundation.
-2. Antonopoulos, A. M., & Wood, G. (2018). *Mastering Ethereum*. O'Reilly Media.
-3. Schär, F. (2021). *Decentralized Finance: On Blockchain- and Smart Contract-Based Financial Markets*. Federal Reserve Bank of St. Louis Review.
-4. Mihailescu, M. I., & Nita, S. L. (2021). *A Novel Authentication Scheme Based on Verifiable Credentials Using Digital Identity in the Context of Web 3.0*.
-5. OpenZeppelin. *Smart Contract Security Best Practices*. https://docs.openzeppelin.com
-6. Solidity Documentation. https://docs.soliditylang.org
-7. Anchor Framework Documentation. https://www.anchor-lang.com
+### Fluxuri clasice
 
----
+- `/` - feed unificat de campanii
+- `/ong` - campanii simple
+- `/kickstart` - campanii milestone/Kickstart
+- `/create` - creare campanie clasica
+- `/campaign/:blockchain/:id` - detaliu campanie ETH/SOL
+- `/milestone/:id` - detaliu milestone ETH
+- `/solana-milestone/:id` - detaliu milestone Solana
+- `/unified/:id` - detaliu cross-chain simplu
+- `/cross-milestone/:id` - detaliu cross-chain milestone
 
-## Licență
+### Fluxuri V2
 
-MIT License — vezi fișierul [LICENSE](LICENSE) pentru detalii.
+- `/v2` - campanii V2
+- `/v2/create` - creare campanie V2
+- `/v2/campaign/:blockchain/:id` - detaliu campanie V2
+- `/v2/kickstart` - campanii Kickstart V2
+- `/v2/kickstart/create` - creare Kickstart V2
+- `/v2/kickstart/:id` - detaliu Kickstart Ethereum
+- `/v2/kickstart/sol/:id` - detaliu Kickstart Solana
 
----
+## Testare
 
-*FundChain — Transparență, Descentralizare, Încredere*
+Ethereum:
+
+```bash
+cd ethereum
+npm test
+```
+
+Solana:
+
+```bash
+cd solana/crowdfunding
+anchor test
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+## Note de securitate
+
+- Contractele folosesc Solidity 0.8.28, cu verificari built-in pentru overflow/underflow.
+- Transferurile urmeaza modelul Checks-Effects-Interactions unde este relevant.
+- Functiile critice sunt restrictionate la owner.
+- Voturile milestone sunt inregistrate pentru a preveni votarea multipla.
+- Programul Solana foloseste PDA-uri pentru vault-uri, donatori si voturi.
+- Retragerea SOL pastreaza conturile rent-exempt.
+
+## Materiale auxiliare
+
+Directoarele `disertatie_work/`, `disertatie_audit/`, `docx_render_review/` si `tools/` contin documente, exporturi, imagini si scripturi folosite pentru redactarea si auditarea lucrarii. Ele nu sunt necesare pentru rularea DApp-ului.
+
+## Licenta
+
+Fisierul `LICENSE` nu este prezent in starea curenta a repository-ului. Daca proiectul trebuie publicat, adauga explicit licenta dorita si actualizeaza aceasta sectiune.
