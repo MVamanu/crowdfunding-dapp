@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IERC20StableMilestone {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
-}
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title CrowdfundingStableMilestoneV2 - USDC milestone crowdfunding with cross-chain tracking
 /// @notice Accepts local USDC donations and lets the owner record externally verified USDC donations.
 contract CrowdfundingStableMilestoneV2 {
-    IERC20StableMilestone public immutable usdc;
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable usdc;
 
     struct Campaign {
         address owner;
@@ -77,7 +76,7 @@ contract CrowdfundingStableMilestoneV2 {
 
     constructor(address _usdc) {
         require(_usdc != address(0), "Adresa invalida");
-        usdc = IERC20StableMilestone(_usdc);
+        usdc = IERC20(_usdc);
     }
 
     function createCampaign(
@@ -158,7 +157,7 @@ contract CrowdfundingStableMilestoneV2 {
         campaign.amountRaisedLocal += _amount;
         _checkGoal(campaign);
 
-        require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer esuat");
+        usdc.safeTransferFrom(msg.sender, address(this), _amount);
         emit DonationReceived(_id, msg.sender, _amount, "eth");
     }
 
@@ -246,7 +245,7 @@ contract CrowdfundingStableMilestoneV2 {
 
             if (releaseAmount > 0) {
                 releasedLocal[_id] += releaseAmount;
-                require(usdc.transfer(campaign.owner, releaseAmount), "Transfer esuat");
+                usdc.safeTransfer(campaign.owner, releaseAmount);
             }
             emit MilestoneApproved(_id, _milestoneId, releaseAmount);
         } else {
@@ -265,7 +264,7 @@ contract CrowdfundingStableMilestoneV2 {
         require(amount > 0, "Nu ai donatii de returnat");
 
         donationsLocal[_id][msg.sender] = 0;
-        require(usdc.transfer(msg.sender, amount), "Refund esuat");
+        usdc.safeTransfer(msg.sender, amount);
         emit RefundIssued(_id, msg.sender, amount);
     }
 

@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 /// @title CrowdfundingStableV2 - Campanie USDC cross-chain cu swap ETH->USDC via Uniswap V2
 /// @author Marian Dumitru Vamanu
 /// @notice Accepta donatii in ETH (swap automat la USDC) sau direct in USDC
 /// @dev Integreaza Uniswap V2 Router pentru conversie ETH->USDC on-chain
-
-interface IERC20 {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-    function allowance(address owner, address spender) external view returns (uint256);
-}
 
 /// @notice Interfata Uniswap V2 Router pentru swap ETH->USDC
 interface IUniswapV2Router {
@@ -31,6 +27,7 @@ interface IUniswapV2Router {
 }
 
 contract CrowdfundingStableV2 {
+    using SafeERC20 for IERC20;
 
     IERC20 public immutable usdc;
     IUniswapV2Router public immutable uniswapRouter;
@@ -177,7 +174,7 @@ contract CrowdfundingStableV2 {
         campaign.amountRaisedLocal += _amount;
         _checkGoal(campaign);
 
-        require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer esuat");
+        usdc.safeTransferFrom(msg.sender, address(this), _amount);
         emit DonationReceived(_id, msg.sender, _amount, "eth-usdc");
     }
 
@@ -227,7 +224,7 @@ contract CrowdfundingStableV2 {
         campaign.amountRaisedLocal += _amount;
         _checkGoal(campaign);
 
-        require(usdc.transferFrom(msg.sender, address(this), _amount), "Transfer esuat");
+        usdc.safeTransferFrom(msg.sender, address(this), _amount);
         emit DonationReceived(_id, msg.sender, _amount, "eth-usdc");
     }
 
@@ -269,7 +266,7 @@ contract CrowdfundingStableV2 {
         campaign.isActive = false;
         uint256 amount = campaign.amountRaisedLocal;
 
-        require(usdc.transfer(msg.sender, amount), "Transfer esuat");
+        usdc.safeTransfer(msg.sender, amount);
         emit FundsWithdrawn(_id, msg.sender, amount);
     }
 
@@ -286,7 +283,7 @@ contract CrowdfundingStableV2 {
         require(amount > 0, "Nu ai donatii de returnat");
 
         donations[_id][msg.sender] = 0;
-        require(usdc.transfer(msg.sender, amount), "Refund esuat");
+        usdc.safeTransfer(msg.sender, amount);
         emit RefundIssued(_id, msg.sender, amount);
     }
 

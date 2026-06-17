@@ -1,21 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title IERC20 - Interfata minima pentru token ERC-20
-/// @dev Folosita pentru interactiunea cu USDC pe Sepolia
-interface IERC20 {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-    function allowance(address owner, address spender) external view returns (uint256);
-}
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title CrowdfundingStable - Crowdfunding cu stablecoin (USDC)
 /// @author Marian Dumitru Vamanu
 /// @notice Campanii de strangere fonduri in USDC - elimina riscul de volatilitate crypto
-/// @dev Foloseste ERC-20 transferFrom pattern: donator trebuie sa apeleze approve() inainte de donate()
+/// @dev Foloseste SafeERC20: donator trebuie sa apeleze approve() inainte de donate()
 /// @dev USDC pe Sepolia: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
 contract CrowdfundingStable {
+    using SafeERC20 for IERC20;
 
     /// @notice Token-ul stablecoin acceptat (USDC)
     IERC20 public immutable stableToken;
@@ -96,7 +91,7 @@ contract CrowdfundingStable {
 
     /// @notice Doneaza USDC la o campanie activa
     /// @dev Donatorul trebuie sa apeleze USDC.approve(contractAddress, amount) inainte
-    /// @dev Pattern ERC-20: transferFrom muta tokens de la donator la contract
+    /// @dev Pattern ERC-20: safeTransferFrom muta tokens de la donator la contract
     /// @param _id ID-ul campaniei
     /// @param _amount Suma in USDC (cu 6 zecimale)
     function donate(uint256 _id, uint256 _amount) external campaignExists(_id) {
@@ -117,11 +112,8 @@ contract CrowdfundingStable {
             campaign.goalReached = true;
         }
 
-        // INTERACTIONS: transfer ERC-20
-        require(
-            stableToken.transferFrom(msg.sender, address(this), _amount),
-            "Transfer USDC esuat"
-        );
+        // INTERACTIONS: transfer ERC-20 prin SafeERC20
+        stableToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         emit DonationReceived(_id, msg.sender, _amount);
     }
@@ -139,10 +131,7 @@ contract CrowdfundingStable {
         uint256 amount = campaign.amountRaised;
 
         // INTERACTIONS
-        require(
-            stableToken.transfer(msg.sender, amount),
-            "Transfer USDC esuat"
-        );
+        stableToken.safeTransfer(msg.sender, amount);
 
         emit FundsWithdrawn(_id, msg.sender, amount);
     }
@@ -164,10 +153,7 @@ contract CrowdfundingStable {
         donations[_id][msg.sender] = 0;
 
         // INTERACTIONS
-        require(
-            stableToken.transfer(msg.sender, amount),
-            "Refund USDC esuat"
-        );
+        stableToken.safeTransfer(msg.sender, amount);
 
         emit RefundIssued(_id, msg.sender, amount);
     }
