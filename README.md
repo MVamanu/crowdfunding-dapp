@@ -20,8 +20,9 @@
 
 - **Campanii simple** — strangere de fonduri ETH sau SOL cu goal definit
 - **Milestone funding** — fondurile sunt eliberate etapizat după aprobarea prin vot a fiecărei etape
-- **Cross-chain** — campanii care acceptă donații atât în ETH cât și în SOL, cu goal unificat în USD
-- **Vot proporțional** — puterea de vot este proporțională cu suma donată (1 wei = 1 vot)
+- **Cross-chain** — campanii care acceptă donații atât în ETH cât și în SOL, cu goal unificat în USD/USDC
+- **Vot proporțional** — puterea de vot este proporțională cu suma donată
+- **Stable v2 (USDC)** — campaniile v2 folosesc USDC ca unitate principală pentru valoare stabilă
 - **Pricing USD** — toate campaniile afișează valorile în USD în timp real (CoinGecko API)
 - **Multi-wallet** — suport pentru MetaMask, Phantom și Solflare cu auto-reconnect
 
@@ -32,13 +33,13 @@
 ```
 ┌─────────────────────────────────────────────────────┐
 │              Frontend — React + Vite                 │
-│   Campanii · ONG/Fundatii · Kickstart (Milestone)   │
+│   Campanii · ONG/Fundatii · Kickstart · v2 (USDC)   │
 ├──────────────┬──────────────────────────────────────┤
 │  ethers.js   │         @coral-xyz/anchor             │
 │  Alchemy RPC │         Solana Web3.js                │
 ├──────────────┴──────────────────────────────────────┤
 │    Ethereum Sepolia    │      Solana Devnet          │
-│  4 Smart Contracts     │   1 Anchor Program          │
+│  7 Smart Contracts     │   1 Anchor Program          │
 └────────────────────────┴─────────────────────────────┘
 ```
 
@@ -56,6 +57,8 @@
 | `CrowdfundingCrossMilestone` | [`0x9613...A4E`](https://sepolia.etherscan.io/address/0x96132Dd1FFD9Ef26dbDEd95Dd4e3C2e220C21A4E) | Cross-chain cu milestone-uri |
 | `CrowdfundingStableV2` | [`0xE3Ae...C1e40`](https://sepolia.etherscan.io/address/0xE3Ae8c1BF26e6bAfe7EDc5143Cd288B9DF4C1e40) | Campanii v2 cu goal stabil in USDC si mirror Solana |
 | `CrowdfundingStableMilestoneV2` | [`0xB0c5...7998`](https://sepolia.etherscan.io/address/0xB0c5218ef966c6EBfEedE21909595cC327267998) | Kickstart v2 USDC cu milestone-uri si mirror cross-chain |
+
+> Notă: `CrowdfundingStable` este contractul de bază USDC reutilizat de versiunea v2; `MockERC20` și `MockUniswapRouter` sunt utilizate exclusiv în suita de teste.
 
 ### Solana — Devnet
 
@@ -83,11 +86,18 @@ Versiunea v2 foloseste USDC ca unitate principala pentru campaniile noi, astfel 
 - Campaniile Kickstart v2 folosesc goal si milestone-uri exprimate in USDC.
 - Ethereum accepta doua moduri de donatie:
   - USDC direct.
-  - ETH convertit in USDC prin Uniswap Sepolia, apoi donat in contract.
+  - ETH convertit automat in USDC, apoi donat in contract.
 - Solana accepta USDC SPL direct pe devnet.
 - Pentru campaniile ETH + SOL, aplicatia creeaza mirror-ul Solana si salveaza adresa lui in `campaignChains`.
 - Pentru campaniile SOL + ETH, aplicatia creeaza mirror-ul Ethereum si pagina Solana gaseste mirror-ul prin contract sau cache local.
 - Progresul cross-chain este afisat in UI prin combinarea sumei locale cu suma din mirror.
+
+### Conversia ETH → USDC (Uniswap)
+
+Conversia ETH→USDC este implementată diferit în funcție de tipul campaniei:
+
+- **Campanii simple** — swap-ul se execută **on-chain**, direct în contractul `CrowdfundingStableV2`, prin **Uniswap V2** (`swapExactETHForTokens`), cu estimarea on-chain prin `getAmountsOut` / `getUSDCForETH` și un slippage de 5%.
+- **Campanii Kickstart cu milestone-uri** — swap-ul se execută **în frontend**, prin **Uniswap V3** (`quoteExactOutputSingle` pentru estimare și `multicall([exactOutputSingle, refundETH])`), iar suma rezultată în USDC este înregistrată ulterior prin `donateLocal`.
 
 ### Limitari v2 pe devnet
 
@@ -102,17 +112,18 @@ Versiunea v2 foloseste USDC ca unitate principala pentru campaniile noi, astfel 
 - **Solidity** 0.8.28 (protecție overflow built-in)
 - **Hardhat** 3.x — compilare, testare, deploy
 - **Hardhat Ignition** — deployment declarativ
+- **OpenZeppelin** — `IERC20`, `SafeERC20`
 - **Pattern** Checks-Effects-Interactions (protecție reentrancy)
 
 ### Program On-Chain — Solana
-- **Rust** 1.95 + **Anchor** 0.31.1
+- **Rust** + **Anchor** 0.31.1
 - **PDA** (Program Derived Addresses) pentru donor/vote records
 - Feature `init-if-needed` pentru conturi existente
 
 ### Frontend
 - **React** 19 + **Vite** — interfață utilizator
 - **ethers.js** v6 — interacțiune cu Ethereum
-- **@coral-xyz/anchor** 0.32.x în frontend / 0.31.1 pentru programul Anchor — interacțiune cu Solana
+- **@coral-xyz/anchor** — interacțiune cu Solana
 - **CoinGecko API** — prețuri ETH/SOL în timp real
 
 ---
@@ -148,7 +159,7 @@ npx hardhat test
 ```bash
 cd solana/crowdfunding
 
-# Setare variabile de mediu
+# Setare variabile de mediu (PowerShell)
 $env:ANCHOR_PROVIDER_URL = "https://api.devnet.solana.com"
 $env:ANCHOR_WALLET = "C:\Users\<user>\.config\solana\id.json"
 
@@ -175,32 +186,48 @@ Aplicația va fi disponibilă la `http://localhost:5173`
 crowdfunding-dapp/
 ├── ethereum/
 │   ├── contracts/
-│   │   ├── Crowdfunding.sol              # Campanie simplă ETH
-│   │   ├── CrowdfundingMilestone.sol     # Milestone cu vot
-│   │   ├── CrowdfundingUnified.sol       # Cross-chain simplu
-│   │   └── CrowdfundingCrossMilestone.sol # Cross-chain milestone
-│   ├── test/                             # 30 teste automate
-│   └── ignition/modules/                 # Deploy modules
+│   │   ├── Crowdfunding.sol                   # Campanie simplă ETH
+│   │   ├── CrowdfundingMilestone.sol          # Milestone cu vot
+│   │   ├── CrowdfundingUnified.sol            # Cross-chain simplu
+│   │   ├── CrowdfundingCrossMilestone.sol     # Cross-chain milestone
+│   │   ├── CrowdfundingStable.sol             # Campanie USDC (bază v2)
+│   │   ├── CrowdfundingStableV2.sol           # Campanie v2 USDC + swap ETH→USDC (Uniswap V2)
+│   │   ├── CrowdfundingStableMilestoneV2.sol  # Kickstart v2 USDC cross-chain
+│   │   ├── MockERC20.sol                       # USDC simulat (teste)
+│   │   └── MockUniswapRouter.sol               # Router Uniswap V2 simulat (teste)
+│   ├── test/                                   # 60 teste automate (7 suite)
+│   └── ignition/modules/                       # Deploy modules
 │
 ├── solana/crowdfunding/
-│   └── programs/crowdfunding/src/
-│       └── lib.rs                        # Program Anchor (campanie + milestone)
+│   ├── programs/crowdfunding/src/
+│   │   └── lib.rs                              # Program Anchor (campanie + milestone + USDC)
+│   └── tests/crowdfunding.ts                   # 14 teste automate
 │
 └── frontend/src/
     ├── pages/
-    │   ├── AllCampaigns.jsx              # Feed unificat toate campaniile
-    │   ├── OngCampaigns.jsx              # Campanii simple ONG
-    │   ├── KickstartCampaigns.jsx        # Campanii milestone
-    │   ├── CampaignDetail.jsx            # Detalii ETH/SOL simplu
-    │   ├── MilestoneCampaignDetail.jsx   # Detalii milestone ETH
-    │   ├── SolanaMilestoneCampaignDetail.jsx # Detalii milestone SOL
-    │   ├── UnifiedCampaignDetail.jsx     # Detalii cross-chain simplu
-    │   └── CrossMilestoneDetail.jsx      # Detalii cross-chain milestone
+    │   ├── AllCampaigns.jsx                     # Feed unificat (v1)
+    │   ├── OngCampaigns.jsx                     # Campanii simple ONG
+    │   ├── KickstartCampaigns.jsx              # Campanii milestone
+    │   ├── CampaignDetail.jsx                   # Detalii ETH/SOL simplu
+    │   ├── MilestoneCampaignDetail.jsx         # Detalii milestone ETH
+    │   ├── SolanaMilestoneCampaignDetail.jsx   # Detalii milestone SOL
+    │   ├── UnifiedCampaignDetail.jsx           # Detalii cross-chain simplu
+    │   ├── CrossMilestoneDetail.jsx            # Detalii cross-chain milestone
+    │   └── v2/                                  # Fluxurile v2 (USDC)
+    │       ├── AllCampaignsV2.jsx
+    │       ├── CreateCampaignV2.jsx
+    │       ├── CampaignDetailV2.jsx             # Donație USDC / ETH (swap on-chain Uniswap V2)
+    │       ├── CreateKickstartV2.jsx
+    │       ├── KickstartCampaignsV2.jsx
+    │       ├── KickstartDetailV2.jsx            # Donație Kickstart (swap frontend Uniswap V3)
+    │       └── SolanaKickstartDetailV2.jsx
     ├── components/
-    │   ├── Navbar.jsx                    # Navigare + wallet connect
-    │   └── ConnectWalletModal.jsx        # Modal conectare wallet
+    │   ├── Navbar.jsx                           # Navigare + wallet connect
+    │   └── ConnectWalletModal.jsx               # Modal conectare wallet
+    ├── config/
+    │   └── chains.js                            # Adrese contracte, Uniswap, USDC, RPC
     └── hooks/
-        └── useCryptoPrices.js            # Prețuri live ETH/SOL
+        └── useCryptoPrices.js                   # Prețuri live ETH/SOL
 ```
 
 ---
@@ -214,14 +241,18 @@ cd ethereum
 npx hardhat test
 ```
 
-**30 teste automate** acoperind:
+**60 teste automate** (toate trec), distribuite pe 7 suite:
 
-| Modul | Teste |
-|-------|-------|
-| `Crowdfunding` | createCampaign, donate, withdraw, refund |
-| `CrowdfundingMilestone` | create, donate, submitMilestone, vote, finalize |
-| `CrowdfundingUnified` | create, donate, withdraw |
-| `CrowdfundingCrossMilestone` | create, donateETH, recordSolDonation, vote |
+| Suită | Contract testat | Teste |
+|-------|-----------------|-------|
+| `Crowdfunding` | Crowdfunding.sol | 8 |
+| `CrowdfundingMilestone` | CrowdfundingMilestone.sol | 10 |
+| `CrowdfundingCrossMilestone` | CrowdfundingCrossMilestone.sol | 8 |
+| `CrowdfundingStable` | CrowdfundingStable.sol | 7 |
+| `CrowdfundingStableV2` | CrowdfundingStableV2.sol | 11 |
+| `CrowdfundingStableMilestoneV2` | CrowdfundingStableMilestoneV2.sol | 11 |
+| `CrowdfundingUnified` | CrowdfundingUnified.sol | 5 |
+| **Total** | | **60** |
 
 ### Frontend
 
@@ -233,23 +264,17 @@ npm run build
 
 ### Solana
 
-Testele Solana se ruleaza local/manual din workspace-ul Anchor:
-
 ```bash
 cd solana/crowdfunding
-npm run test:devnet
+npm install
+anchor test
 ```
 
-Suite-ul curent acopera 14 teste pentru:
+Suita curentă acoperă **14 teste** pentru: campanii SOL simple; donații SOL; milestone-uri SOL; vot și finalizare milestone; campanii USDC pe Solana; donații USDC și setarea `goalReached`.
 
-- campanii SOL simple;
-- donatii SOL;
-- milestone-uri SOL;
-- vot si finalizare milestone;
-- campanii USDC pe Solana;
-- donatii USDC si setarea `goalReached`.
+Pe devnet pot aparea mesaje `429 Too Many Requests` de la RPC; acestea sunt retry-uri si nu indica esec daca testele se incheie cu `14 passing`. Pentru o rulare deterministă (validator local), se recomandă `anchor test`.
 
-Pe devnet pot aparea mesaje `429 Too Many Requests` de la RPC; acestea sunt retry-uri si nu indica esec daca testele se incheie cu `14 passing`.
+> **Total: 74 teste automate** (60 Ethereum + 14 Solana), rată de succes 100%.
 
 ---
 
@@ -262,8 +287,10 @@ Contractele implementează măsuri de securitate conform standardelor industriei
 | **Reentrancy** | Pattern Checks-Effects-Interactions în toate funcțiile de transfer |
 | **Overflow/Underflow** | Solidity 0.8.28 cu verificări built-in (înlocuiește SafeMath) |
 | **Access Control** | Modifier `onlyOwner` pe funcțiile critice (withdraw, submitMilestone) |
+| **Transfer tokenuri** | `SafeERC20` pentru transferurile USDC |
 | **Double voting** | Mapping `hasVoted[campaignId][milestoneId][address]` |
 | **Expired campaigns** | Verificare `block.timestamp` înainte de acceptarea donațiilor |
+| **Slippage swap** | Minim 95% din suma estimată (5% slippage maxim) la conversia ETH→USDC |
 
 ---
 
